@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -10,34 +11,74 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { BookOpen, BarChart2, Code, CheckCircle } from "lucide-react";
+import { BookOpen, BarChart2, Code, CheckCircle, LogIn } from "lucide-react";
 import TopicSelection from "@/components/practice/TopicSelection";
+import { useAuth } from "@/components/auth/AuthProvider";
+import AuthModal from "@/components/auth/AuthModal";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("topics");
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const { user, login, register, logout, isLoading } = useAuth();
+  const router = useRouter();
 
-  // Mock user data - in a real app, this would come from authentication
-  const user = {
-    name: "Student",
-    progress: {
-      completedQuestions: 24,
-      totalQuestions: 50,
-      strongTopics: ["Arrays", "Loops"],
-      weakTopics: ["Inheritance", "Recursion"],
-    },
+  // Generate stats based on user data or default values
+  const stats = user
+    ? [
+        {
+          name: "Completed",
+          value: `${user.progress?.completedQuestions || 0}/${user.progress?.totalQuestions || 50}`,
+          icon: CheckCircle,
+        },
+        {
+          name: "MCQs Correct",
+          value: user.progress?.mcqsCorrect || "0%",
+          icon: BarChart2,
+        },
+        {
+          name: "FRQs Attempted",
+          value: user.progress?.frqsAttempted || "0",
+          icon: Code,
+        },
+        {
+          name: "Study Time",
+          value: user.progress?.studyTime || "0 hrs",
+          icon: BookOpen,
+        },
+      ]
+    : [
+        { name: "Completed", value: "0/50", icon: CheckCircle },
+        { name: "MCQs Correct", value: "0%", icon: BarChart2 },
+        { name: "FRQs Attempted", value: "0", icon: Code },
+        { name: "Study Time", value: "0 hrs", icon: BookOpen },
+      ];
+
+  const handleLogin = async (email: string, password: string) => {
+    await login(email, password);
   };
 
-  // Mock stats data
-  const stats = [
-    {
-      name: "Completed",
-      value: `${user.progress.completedQuestions}/${user.progress.totalQuestions}`,
-      icon: CheckCircle,
-    },
-    { name: "MCQs Correct", value: "78%", icon: BarChart2 },
-    { name: "FRQs Attempted", value: "12", icon: Code },
-    { name: "Study Time", value: "4.5 hrs", icon: BookOpen },
-  ];
+  const handleRegister = async (
+    email: string,
+    password: string,
+    name: string,
+  ) => {
+    await register(email, password, name);
+  };
+
+  const handleLogout = () => {
+    logout();
+  };
+
+  // Default user progress data
+  const defaultProgress = {
+    completedQuestions: 0,
+    totalQuestions: 50,
+    strongTopics: [],
+    weakTopics: [],
+  };
+
+  // Use user data if available, otherwise use default
+  const userProgress = user?.progress || defaultProgress;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -49,15 +90,31 @@ export default function Dashboard() {
               AP CS Exam Prep
             </h1>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                Welcome, {user.name}
-              </span>
-              <Button variant="outline" size="sm">
-                Profile
-              </Button>
-              <Button variant="outline" size="sm">
-                Logout
-              </Button>
+              {user ? (
+                <>
+                  <span className="text-sm text-muted-foreground">
+                    Welcome, {user.name}
+                  </span>
+                  <Button variant="outline" size="sm">
+                    Profile
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleLogout}>
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <LogIn size={16} />
+                    Login / Register
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -150,98 +207,152 @@ export default function Dashboard() {
 
           {/* Progress Tab */}
           <TabsContent value="progress" className="space-y-4">
-            <h2 className="text-xl font-semibold mb-6">Your Progress</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {!user ? (
               <Card>
-                <CardHeader>
-                  <CardTitle>Performance Overview</CardTitle>
-                  <CardDescription>
-                    Your progress across all topics
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-64 flex items-center justify-center border rounded-md">
-                    <p className="text-muted-foreground">
-                      Performance chart will appear here
-                    </p>
-                  </div>
+                <CardContent className="p-8 text-center">
+                  <h3 className="text-xl font-medium mb-4">
+                    Login to Track Your Progress
+                  </h3>
+                  <p className="text-muted-foreground mb-6">
+                    Create an account or login to save your practice results and
+                    track your progress over time.
+                  </p>
+                  <Button onClick={() => setIsAuthModalOpen(true)}>
+                    Login / Register
+                  </Button>
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Strengths & Weaknesses</CardTitle>
-                  <CardDescription>Topics to focus on</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-medium mb-2">Strong Topics</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {user.progress.strongTopics.map((topic, i) => (
-                          <div
-                            key={i}
-                            className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 px-3 py-1 rounded-full text-sm"
-                          >
-                            {topic}
-                          </div>
-                        ))}
+            ) : (
+              <>
+                <h2 className="text-xl font-semibold mb-6">Your Progress</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Performance Overview</CardTitle>
+                      <CardDescription>
+                        Your progress across all topics
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64 flex items-center justify-center border rounded-md">
+                        <p className="text-muted-foreground">
+                          {userProgress.completedQuestions > 0
+                            ? "Performance chart will appear here"
+                            : "Complete some practice questions to see your performance chart"}
+                        </p>
                       </div>
-                    </div>
-                    <div>
-                      <h3 className="font-medium mb-2">Needs Improvement</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {user.progress.weakTopics.map((topic, i) => (
-                          <div
-                            key={i}
-                            className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100 px-3 py-1 rounded-full text-sm"
-                          >
-                            {topic}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
 
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>
-                    Your latest practice sessions
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="border rounded-md divide-y">
-                    {[1, 2, 3].map((_, i) => (
-                      <div
-                        key={i}
-                        className="p-4 flex justify-between items-center"
-                      >
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Strengths & Weaknesses</CardTitle>
+                      <CardDescription>Topics to focus on</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
                         <div>
-                          <p className="font-medium">
-                            FRQ Practice:{" "}
-                            {["Arrays", "Inheritance", "Loops"][i]}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {["Yesterday", "2 days ago", "1 week ago"][i]}
-                          </p>
+                          <h3 className="font-medium mb-2">Strong Topics</h3>
+                          {userProgress.strongTopics &&
+                          userProgress.strongTopics.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {userProgress.strongTopics.map((topic, i) => (
+                                <div
+                                  key={i}
+                                  className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 px-3 py-1 rounded-full text-sm"
+                                >
+                                  {topic}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Complete more practice to identify your strengths
+                            </p>
+                          )}
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium">
-                            {["8/10", "6/10", "9/10"][i]} points
-                          </p>
-                          <Button variant="link" size="sm" className="p-0">
-                            Review
+                        <div>
+                          <h3 className="font-medium mb-2">
+                            Needs Improvement
+                          </h3>
+                          {userProgress.weakTopics &&
+                          userProgress.weakTopics.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {userProgress.weakTopics.map((topic, i) => (
+                                <div
+                                  key={i}
+                                  className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100 px-3 py-1 rounded-full text-sm"
+                                >
+                                  {topic}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Complete more practice to identify areas for
+                              improvement
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="lg:col-span-2">
+                    <CardHeader>
+                      <CardTitle>Recent Activity</CardTitle>
+                      <CardDescription>
+                        Your latest practice sessions
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {userProgress.completedQuestions > 0 ? (
+                        <div className="border rounded-md divide-y">
+                          {[1, 2, 3].map((_, i) => (
+                            <div
+                              key={i}
+                              className="p-4 flex justify-between items-center"
+                            >
+                              <div>
+                                <p className="font-medium">
+                                  FRQ Practice:{" "}
+                                  {["Arrays", "Inheritance", "Loops"][i]}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {["Yesterday", "2 days ago", "1 week ago"][i]}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-medium">
+                                  {["8/10", "6/10", "9/10"][i]} points
+                                </p>
+                                <Button
+                                  variant="link"
+                                  size="sm"
+                                  className="p-0"
+                                >
+                                  Review
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <p>No practice sessions yet</p>
+                          <Button
+                            variant="link"
+                            onClick={() => setActiveTab("topics")}
+                          >
+                            Start practicing now
                           </Button>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            )}
           </TabsContent>
         </Tabs>
       </main>
@@ -252,6 +363,14 @@ export default function Dashboard() {
           <p>AP CS Exam Prep App &copy; {new Date().getFullYear()}</p>
         </div>
       </footer>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+      />
     </div>
   );
 }
