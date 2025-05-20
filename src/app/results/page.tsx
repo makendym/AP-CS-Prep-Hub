@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import FeedbackView from "@/components/practice/FeedbackView";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-export default function ResultsPage() {
+function ResultsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -120,5 +120,15 @@ export default function ResultsPage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function ResultsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+      <p>Loading results...</p>
+    </div>}>
+      <ResultsContent />
+    </Suspense>
   );
 }
