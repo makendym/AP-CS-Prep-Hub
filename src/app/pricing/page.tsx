@@ -17,7 +17,7 @@ import AuthModal from "@/components/auth/AuthModal";
 
 export default function PricingPage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const { user, login, register } = useAuth();
+  const { user, login, register, loginWithGoogle } = useAuth();
   const router = useRouter();
 
   const handleLogin = async (email: string, password: string) => {

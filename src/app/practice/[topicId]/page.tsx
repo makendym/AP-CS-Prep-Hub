@@ -11,7 +11,7 @@ const topicQuestions = {
   arrays: [
     {
       id: "q1",
-      type: "MCQ",
+      type: "MCQ" as const,
       text: "Which of the following correctly declares an array of integers in Java?",
       topic: "Arrays",
       options: [
@@ -24,7 +24,7 @@ const topicQuestions = {
     },
     {
       id: "q2",
-      type: "FRQ",
+      type: "FRQ" as const,
       text: "Write a method that takes an array of integers and returns the sum of all even numbers in the array.",
       topic: "Arrays",
       codeTemplate:
@@ -34,7 +34,7 @@ const topicQuestions = {
   loops: [
     {
       id: "q3",
-      type: "MCQ",
+      type: "MCQ" as const,
       text: "Which loop is guaranteed to execute at least once?",
       topic: "Loops",
       options: ["for loop", "while loop", "do-while loop", "for-each loop"],
@@ -42,7 +42,7 @@ const topicQuestions = {
     },
     {
       id: "q4",
-      type: "FRQ",
+      type: "FRQ" as const,
       text: "Write a method that uses nested loops to print a pattern of stars in the shape of a right triangle.",
       topic: "Loops",
       codeTemplate:
@@ -52,7 +52,7 @@ const topicQuestions = {
   oop: [
     {
       id: "q5",
-      type: "MCQ",
+      type: "MCQ" as const,
       text: "Which of the following is NOT a principle of object-oriented programming?",
       topic: "Object-Oriented Programming",
       options: [
@@ -65,7 +65,7 @@ const topicQuestions = {
     },
     {
       id: "q6",
-      type: "FRQ",
+      type: "FRQ" as const,
       text: "Create a class called 'Student' with appropriate instance variables and methods.",
       topic: "Object-Oriented Programming",
       codeTemplate: "public class Student {\n    // Your code here\n    \n}",
@@ -74,7 +74,7 @@ const topicQuestions = {
   recursion: [
     {
       id: "q7",
-      type: "MCQ",
+      type: "MCQ" as const,
       text: "What is the base case in a recursive function?",
       topic: "Recursion",
       options: [
@@ -88,7 +88,7 @@ const topicQuestions = {
     },
     {
       id: "q8",
-      type: "FRQ",
+      type: "FRQ" as const,
       text: "Write a recursive method to calculate the factorial of a number.",
       topic: "Recursion",
       codeTemplate:
@@ -98,7 +98,7 @@ const topicQuestions = {
   algorithms: [
     {
       id: "q9",
-      type: "MCQ",
+      type: "MCQ" as const,
       text: "What is the time complexity of binary search?",
       topic: "Searching & Sorting",
       options: ["O(n)", "O(n²)", "O(log n)", "O(n log n)"],
@@ -106,7 +106,7 @@ const topicQuestions = {
     },
     {
       id: "q10",
-      type: "FRQ",
+      type: "FRQ" as const,
       text: "Implement the merge sort algorithm for an array of integers.",
       topic: "Searching & Sorting",
       codeTemplate:
@@ -116,7 +116,7 @@ const topicQuestions = {
   inheritance: [
     {
       id: "q11",
-      type: "MCQ",
+      type: "MCQ" as const,
       text: "Which keyword is used to inherit a class in Java?",
       topic: "Inheritance & Interfaces",
       options: ["extends", "implements", "inherits", "super"],
@@ -124,7 +124,7 @@ const topicQuestions = {
     },
     {
       id: "q12",
-      type: "FRQ",
+      type: "FRQ" as const,
       text: "Create a class hierarchy with a base class 'Shape' and derived classes 'Circle' and 'Rectangle'.",
       topic: "Inheritance & Interfaces",
       codeTemplate:
