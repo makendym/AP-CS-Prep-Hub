@@ -19,7 +19,8 @@ import AuthModal from "@/components/auth/AuthModal";
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("topics");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const { user, login, register, logout, isLoading } = useAuth();
+  const { user, login, loginWithGoogle, register, logout, isLoading } =
+    useAuth();
   const router = useRouter();
 
   // Generate stats based on user data or default values
@@ -27,22 +28,22 @@ export default function Dashboard() {
     ? [
         {
           name: "Completed",
-          value: `${user.progress?.completedQuestions || 0}/${user.progress?.totalQuestions || 50}`,
+          value: `${user?.progress?.completedQuestions || 0}/${user?.progress?.totalQuestions || 50}`,
           icon: CheckCircle,
         },
         {
           name: "MCQs Correct",
-          value: user.progress?.mcqsCorrect || "0%",
+          value: user?.progress?.mcqsCorrect || "0%",
           icon: BarChart2,
         },
         {
           name: "FRQs Attempted",
-          value: user.progress?.frqsAttempted || "0",
+          value: user?.progress?.frqsAttempted || "0",
           icon: Code,
         },
         {
           name: "Study Time",
-          value: user.progress?.studyTime || "0 hrs",
+          value: user?.progress?.studyTime || "0 hrs",
           icon: BookOpen,
         },
       ]
@@ -78,7 +79,8 @@ export default function Dashboard() {
   };
 
   // Use user data if available, otherwise use default
-  const userProgress = user?.progress || defaultProgress;
+  const userProgress = (user?.progress ||
+    defaultProgress) as typeof defaultProgress;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -90,6 +92,13 @@ export default function Dashboard() {
               AP CS Exam Prep
             </h1>
             <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/pricing")}
+              >
+                Pricing
+              </Button>
               {user ? (
                 <>
                   <span className="text-sm text-muted-foreground">
@@ -169,7 +178,13 @@ export default function Dashboard() {
                 </Button>
               </div>
             </div>
-            <TopicSelection />
+            <TopicSelection
+              onTopicSelect={(topicId) => {
+                // In a real implementation, this would navigate to the practice interface
+                console.log(`Selected topic: ${topicId}`);
+                // For demo purposes, we could add navigation here
+              }}
+            />
           </TabsContent>
 
           {/* Reference Cards Tab */}
@@ -179,25 +194,26 @@ export default function Dashboard() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                "Arrays",
-                "Loops",
-                "Object-Oriented Programming",
-                "Inheritance",
-                "Recursion",
-                "Sorting & Searching",
+                { name: "Arrays", id: "arrays" },
+                { name: "Loops", id: "loops" },
+                { name: "Object-Oriented Programming", id: "oop" },
+                { name: "Inheritance", id: "inheritance" },
+                { name: "Recursion", id: "recursion" },
+                { name: "Sorting & Searching", id: "algorithms" },
               ].map((topic, index) => (
                 <Card
                   key={index}
                   className="hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => router.push(`/reference/${topic.id}`)}
                 >
                   <CardHeader>
-                    <CardTitle>{topic}</CardTitle>
+                    <CardTitle>{topic.name}</CardTitle>
                     <CardDescription>Key concepts and examples</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
                       Click to view concise summaries and code examples for{" "}
-                      {topic.toLowerCase()}.
+                      {topic.name.toLowerCase()}.
                     </p>
                   </CardContent>
                 </Card>
@@ -370,6 +386,7 @@ export default function Dashboard() {
         onClose={() => setIsAuthModalOpen(false)}
         onLogin={handleLogin}
         onRegister={handleRegister}
+        onGoogleLogin={loginWithGoogle}
       />
     </div>
   );

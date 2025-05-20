@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -37,6 +38,17 @@ export default function TopicSelection({
   topics = defaultTopics,
   onTopicSelect = () => {},
 }: TopicSelectionProps) {
+  const router = useRouter();
+
+  const handlePracticeClick = (topicId: string) => {
+    router.push(`/practice/${topicId}`);
+    onTopicSelect(topicId);
+  };
+
+  const handleReferenceClick = (topicId: string) => {
+    router.push(`/reference/${topicId}`);
+  };
+
   return (
     <div className="bg-background w-full py-6">
       <div className="container mx-auto">
@@ -94,8 +106,19 @@ export default function TopicSelection({
                   </div>
                 )}
               </CardContent>
-              <CardFooter>
-                <Button className="w-full">Start Practice</Button>
+              <CardFooter className="flex gap-2">
+                <Button
+                  className="flex-1"
+                  onClick={() => handlePracticeClick(topic.id)}
+                >
+                  Start Practice
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleReferenceClick(topic.id)}
+                >
+                  <BookOpen className="h-4 w-4" />
+                </Button>
               </CardFooter>
             </Card>
           ))}

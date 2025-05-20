@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// This function can be marked `async` if using `await` inside
 export function middleware(request: NextRequest) {
-  // For demonstration purposes, we're not implementing actual auth checking in middleware
-  // In a real app, you would check for auth tokens in cookies/headers here
+  // Get the pathname of the request
+  const path = request.nextUrl.pathname;
 
-  // Just pass through all requests
+  // All paths are public in this version - no forced redirects
+  // This matches the storyboard flow where users can browse without an account
+
   return NextResponse.next();
 }
 
-// See "Matching Paths" below to learn more
 export const config = {
   matcher: [
     // Skip all internal paths (_next, api, etc)

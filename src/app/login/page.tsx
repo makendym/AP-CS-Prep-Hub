@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
+import Link from "next/link";
 
 export default function LoginPage() {
   const { user, login, register, isLoading } = useAuth();
@@ -173,11 +174,19 @@ export default function LoginPage() {
               </TabsContent>
             </Tabs>
           </CardContent>
-          <CardFooter className="flex justify-center">
+          <CardFooter className="flex flex-col space-y-4">
             <p className="text-sm text-muted-foreground">
               By continuing, you agree to our Terms of Service and Privacy
               Policy
             </p>
+            <div className="w-full border-t pt-4">
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/">Continue as Guest</Link>
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                You can browse topics and reference materials without an account
+              </p>
+            </div>
           </CardFooter>
         </Card>
       </div>

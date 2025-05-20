@@ -166,7 +166,7 @@ export default function PracticeInterface({
             ) : (
               <CodeEditor
                 initialCode={currentQuestion.codeTemplate || ""}
-                onChange={handleCodeChange}
+                onSubmit={handleCodeChange}
                 language="java"
               />
             )}
