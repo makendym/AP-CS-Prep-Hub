@@ -8,6 +8,9 @@ type User = {
   id: string;
   name: string;
   email: string;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
   progress?: {
     completedQuestions?: number;
     totalQuestions?: number;
@@ -88,30 +91,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    // For demo purposes, any email/password combination works
-    const mockUser = {
-      id: "user-" + Math.random().toString(36).substr(2, 9),
-      name: email.split("@")[0],
-      email,
-      progress: {
-        completedQuestions: Math.floor(Math.random() * 20),
-        totalQuestions: 50,
-        mcqsCorrect: `${Math.floor(Math.random() * 100)}%`,
-        frqsAttempted: String(Math.floor(Math.random() * 10)),
-        studyTime: `${Math.floor(Math.random() * 10)} hrs`,
-        strongTopics: getRandomTopics(),
-        weakTopics: getRandomTopics(),
-      },
-    };
+      if (error) throw error;
 
-    setUser(mockUser);
-    localStorage.setItem("user", JSON.stringify(mockUser));
-    // Set a cookie for middleware authentication
-    document.cookie = `user=true; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
-    setIsLoading(false);
+      if (data.user) {
+        const mockUser: User = {
+          id: data.user.id,
+          name: data.user.user_metadata?.name || email.split("@")[0],
+          email: data.user.email || email,
+          emailVerified: data.user.email_confirmed_at !== null,
+          createdAt: data.user.created_at || new Date().toISOString(),
+          updatedAt: data.user.updated_at || new Date().toISOString(),
+          progress: {
+            completedQuestions: Math.floor(Math.random() * 20),
+            totalQuestions: 50,
+            mcqsCorrect: `${Math.floor(Math.random() * 100)}%`,
+            frqsAttempted: String(Math.floor(Math.random() * 10)),
+            studyTime: `${Math.floor(Math.random() * 10)} hrs`,
+            strongTopics: getRandomTopics(),
+            weakTopics: getRandomTopics(),
+          },
+        };
+
+        setUser(mockUser);
+        localStorage.setItem("user", JSON.stringify(mockUser));
+        document.cookie = `user=true; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
+      }
+    } catch (error) {
+      console.error("Error logging in:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Mock register function
@@ -125,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           data: {
             name,
+            email_verified: false,
           },
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
@@ -132,8 +149,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
-      // Optionally, you can set the user state here if needed
-      // setUser(data.user);
+      if (data.user) {
+        const newUser: User = {
+          id: data.user.id,
+          name: data.user.user_metadata?.name || name,
+          email: data.user.email || email,
+          emailVerified: false,
+          createdAt: data.user.created_at || new Date().toISOString(),
+          updatedAt: data.user.updated_at || new Date().toISOString(),
+          progress: {
+            completedQuestions: 0,
+            totalQuestions: 50,
+            mcqsCorrect: '0%',
+            frqsAttempted: '0',
+            studyTime: '0 hrs',
+            strongTopics: [],
+            weakTopics: [],
+          }
+        };
+        setUser(newUser);
+        localStorage.setItem("user", JSON.stringify(newUser));
+      }
     } catch (error) {
       console.error("Error registering:", error);
       throw error;
@@ -175,6 +211,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: u.id,
         name: u.user_metadata?.name || u.email?.split('@')[0] || 'Unknown',
         email: u.email || '',
+        emailVerified: u.email_confirmed_at !== null,
+        createdAt: u.created_at || new Date().toISOString(),
+        updatedAt: u.updated_at || new Date().toISOString(),
         progress: {
           completedQuestions: Math.floor(Math.random() * 20),
           totalQuestions: 50,
