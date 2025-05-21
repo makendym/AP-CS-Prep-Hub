@@ -42,6 +42,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitejs/plugin-react-swc": "^3.5.0",
     "next": "^15.3.2",
     "postcss": "^8",
     "tailwind-merge": "^2",
