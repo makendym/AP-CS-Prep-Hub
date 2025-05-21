@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.user) {
         const mockUser: User = {
           id: data.user.id,
-          name: data.user.user_metadata?.name || email.split("@")[0],
+          name: data.user.user_metadata?.name || data.user.user_metadata?.full_name || email.split("@")[0],
           email: data.user.email || email,
           emailVerified: data.user.email_confirmed_at !== null,
           createdAt: data.user.created_at || new Date().toISOString(),
@@ -209,7 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       return data.users.map(u => ({
         id: u.id,
-        name: u.user_metadata?.name || u.email?.split('@')[0] || 'Unknown',
+        name: u.user_metadata?.name || u.user_metadata?.full_name || u.email?.split('@')[0] || 'Unknown',
         email: u.email || '',
         emailVerified: u.email_confirmed_at !== null,
         createdAt: u.created_at || new Date().toISOString(),
