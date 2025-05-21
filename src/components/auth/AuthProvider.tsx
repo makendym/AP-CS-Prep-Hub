@@ -26,6 +26,7 @@ type AuthContextType = {
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   loginWithGoogle: () => Promise<void>;
+  fetchUsers: () => Promise<User[]>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -117,29 +118,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (email: string, password: string, name: string) => {
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
-    const mockUser = {
-      id: "user-" + Math.random().toString(36).substr(2, 9),
-      name,
-      email,
-      progress: {
-        completedQuestions: 0,
-        totalQuestions: 50,
-        mcqsCorrect: "0%",
-        frqsAttempted: "0",
-        studyTime: "0 hrs",
-        strongTopics: [],
-        weakTopics: [],
-      },
-    };
+      if (error) throw error;
 
-    setUser(mockUser);
-    localStorage.setItem("user", JSON.stringify(mockUser));
-    // Set a cookie for middleware authentication
-    document.cookie = `user=true; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
-    setIsLoading(false);
+      // Optionally, you can set the user state here if needed
+      // setUser(data.user);
+    } catch (error) {
+      console.error("Error registering:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = () => {
@@ -167,8 +167,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const fetchUsers = async (): Promise<User[]> => {
+    try {
+      const { data, error } = await supabase.auth.admin.listUsers();
+      if (error) throw error;
+      return data.users.map(u => ({
+        id: u.id,
+        name: u.user_metadata?.name || u.email?.split('@')[0] || 'Unknown',
+        email: u.email || '',
+        progress: {
+          completedQuestions: Math.floor(Math.random() * 20),
+          totalQuestions: 50,
+          mcqsCorrect: `${Math.floor(Math.random() * 100)}%`,
+          frqsAttempted: String(Math.floor(Math.random() * 10)),
+          studyTime: `${Math.floor(Math.random() * 10)} hrs`,
+          strongTopics: getRandomTopics(),
+          weakTopics: getRandomTopics(),
+        }
+      }));
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      return [];
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, loginWithGoogle }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, loginWithGoogle, fetchUsers }}>
       {children}
     </AuthContext.Provider>
   );
