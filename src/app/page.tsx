@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, BarChart2, Code, CheckCircle, LogIn } from "lucide-react";
 import TopicSelection from "@/components/practice/TopicSelection";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -22,6 +23,27 @@ export default function Dashboard() {
   const { user, login, loginWithGoogle, register, logout, isLoading } =
     useAuth();
   const router = useRouter();
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  useEffect(() => {
+    // Simulate initial page load
+    const timer = setTimeout(() => {
+      setIsPageLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Handle tab changes with loading state
+  const handleTabChange = (value: string) => {
+    setIsTransitioning(true);
+    setActiveTab(value);
+    // Simulate loading time for tab content
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 500);
+  };
 
   // Generate stats based on user data or default values
   const stats = user
@@ -112,17 +134,15 @@ export default function Dashboard() {
                   </Button>
                 </>
               ) : (
-                <>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => setIsAuthModalOpen(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <LogIn size={16} />
-                    Login / Register
-                  </Button>
-                </>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <LogIn size={16} />
+                  Login / Register
+                </Button>
               )}
             </div>
           </div>
@@ -133,26 +153,37 @@ export default function Dashboard() {
       <main className="flex-1 container mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {stats.map((stat, index) => (
-            <Card key={index} className="bg-card">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {stat.name}
-                  </p>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                </div>
-                <stat.icon className="h-8 w-8 text-primary opacity-80" />
-              </CardContent>
-            </Card>
-          ))}
+          {(isPageLoading || isTransitioning) ? (
+            Array(4).fill(0).map((_, index) => (
+              <Card key={index} className="bg-card">
+                <CardContent className="p-6">
+                  <Skeleton className="h-8 w-24 mb-2" />
+                  <Skeleton className="h-6 w-16" />
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            stats.map((stat, index) => (
+              <Card key={index} className="bg-card">
+                <CardContent className="p-6 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {stat.name}
+                    </p>
+                    <p className="text-2xl font-bold">{stat.value}</p>
+                  </div>
+                  <stat.icon className="h-8 w-8 text-primary opacity-80" />
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
 
         {/* Main Tabs */}
         <Tabs
           defaultValue="topics"
           className="w-full"
-          onValueChange={setActiveTab}
+          onValueChange={handleTabChange}
         >
           <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto mb-8">
             <TabsTrigger value="topics">Practice Topics</TabsTrigger>
@@ -162,76 +193,134 @@ export default function Dashboard() {
 
           {/* Topics Tab */}
           <TabsContent value="topics" className="space-y-4">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">
-                Select a Topic to Practice
-              </h2>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  MCQ Mode
-                </Button>
-                <Button variant="outline" size="sm">
-                  FRQ Mode
-                </Button>
-                <Button variant="default" size="sm">
-                  Random Practice
-                </Button>
-              </div>
-            </div>
-            <TopicSelection
-              onTopicSelect={(topicId) => {
-                // In a real implementation, this would navigate to the practice interface
-                console.log(`Selected topic: ${topicId}`);
-                // For demo purposes, we could add navigation here
-              }}
-            />
+            {(isPageLoading || isTransitioning) ? (
+              <>
+                <div className="flex justify-between items-center mb-6">
+                  <Skeleton className="h-8 w-64" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-9 w-24" />
+                    <Skeleton className="h-9 w-24" />
+                    <Skeleton className="h-9 w-32" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Array(6).fill(0).map((_, index) => (
+                    <Card key={index} className="bg-card">
+                      <CardContent className="p-6">
+                        <Skeleton className="h-6 w-3/4 mb-4" />
+                        <Skeleton className="h-4 w-full mb-2" />
+                        <Skeleton className="h-4 w-2/3" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold">
+                    Select a Topic to Practice
+                  </h2>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm">
+                      MCQ Mode
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      FRQ Mode
+                    </Button>
+                    <Button variant="default" size="sm">
+                      Random Practice
+                    </Button>
+                  </div>
+                </div>
+                <TopicSelection
+                  onTopicSelect={(topicId) => {
+                    console.log(`Selected topic: ${topicId}`);
+                  }}
+                />
+              </>
+            )}
           </TabsContent>
 
           {/* Reference Cards Tab */}
           <TabsContent value="reference" className="space-y-4">
-            <h2 className="text-xl font-semibold mb-6">
-              Quick Reference Cards
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                { name: "Arrays", id: "arrays" },
-                { name: "Loops", id: "loops" },
-                { name: "Object-Oriented Programming", id: "oop" },
-                { name: "Inheritance", id: "inheritance" },
-                { name: "Recursion", id: "recursion" },
-                { name: "Sorting & Searching", id: "algorithms" },
-              ].map((topic, index) => (
-                <Card
-                  key={index}
-                  className="hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => router.push(`/reference/${topic.id}`)}
-                >
-                  <CardHeader>
-                    <CardTitle>{topic.name}</CardTitle>
-                    <CardDescription>Key concepts and examples</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Click to view concise summaries and code examples for{" "}
-                      {topic.name.toLowerCase()}.
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {(isPageLoading || isTransitioning) ? (
+              <>
+                <Skeleton className="h-8 w-64 mb-6" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Array(6).fill(0).map((_, index) => (
+                    <Card key={index} className="bg-card">
+                      <CardContent className="p-6">
+                        <Skeleton className="h-6 w-3/4 mb-4" />
+                        <Skeleton className="h-4 w-full mb-2" />
+                        <Skeleton className="h-4 w-2/3" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl font-semibold mb-6">
+                  Quick Reference Cards
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[
+                    { name: "Arrays", id: "arrays" },
+                    { name: "Loops", id: "loops" },
+                    { name: "Object-Oriented Programming", id: "oop" },
+                    { name: "Inheritance", id: "inheritance" },
+                    { name: "Recursion", id: "recursion" },
+                    { name: "Sorting & Searching", id: "algorithms" },
+                  ].map((topic, index) => (
+                    <Card
+                      key={index}
+                      className="hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => router.push(`/reference/${topic.id}`)}
+                    >
+                      <CardHeader>
+                        <CardTitle>{topic.name}</CardTitle>
+                        <CardDescription>Key concepts and examples</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                          Click to view concise summaries and code examples for{" "}
+                          {topic.name.toLowerCase()}.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
           </TabsContent>
 
           {/* Progress Tab */}
           <TabsContent value="progress" className="space-y-4">
-            {!user ? (
+            {(isPageLoading || isTransitioning) ? (
+              <>
+                <Skeleton className="h-8 w-48 mb-6" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {Array(3).fill(0).map((_, index) => (
+                    <Card key={index} className={index === 2 ? "lg:col-span-2" : ""}>
+                      <CardContent className="p-6">
+                        <Skeleton className="h-6 w-3/4 mb-4" />
+                        <Skeleton className="h-4 w-full mb-2" />
+                        <Skeleton className="h-4 w-2/3" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            ) : !user ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <h3 className="text-xl font-medium mb-4">
                     Login to Track Your Progress
                   </h3>
                   <p className="text-muted-foreground mb-6">
-                    Create an account or login to save your practice results and
-                    track your progress over time.
+                    Create an account or login to save your practice results
+                    and track your progress over time.
                   </p>
                   <Button onClick={() => setIsAuthModalOpen(true)}>
                     Login / Register
@@ -268,7 +357,9 @@ export default function Dashboard() {
                     <CardContent>
                       <div className="space-y-4">
                         <div>
-                          <h3 className="font-medium mb-2">Strong Topics</h3>
+                          <h3 className="font-medium mb-2">
+                            Strong Topics
+                          </h3>
                           {userProgress.strongTopics &&
                           userProgress.strongTopics.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
@@ -283,7 +374,8 @@ export default function Dashboard() {
                             </div>
                           ) : (
                             <p className="text-sm text-muted-foreground">
-                              Complete more practice to identify your strengths
+                              Complete more practice to identify your
+                              strengths
                             </p>
                           )}
                         </div>
@@ -335,7 +427,13 @@ export default function Dashboard() {
                                   {["Arrays", "Inheritance", "Loops"][i]}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  {["Yesterday", "2 days ago", "1 week ago"][i]}
+                                  {
+                                    [
+                                      "Yesterday",
+                                      "2 days ago",
+                                      "1 week ago",
+                                    ][i]
+                                  }
                                 </p>
                               </div>
                               <div className="text-right">
