@@ -35,31 +35,15 @@ function ResultsContent() {
 
   const handleRetry = () => {
     if (!currentQuestion) return;
-
-    // Create URL search params with question ID and mode
+    
+    // Navigate back to the practice page for this specific question
     const params = new URLSearchParams({
       questionId: currentQuestion.id,
-      mode: "retry",
-      questions: encodeURIComponent(JSON.stringify(questions))
+      mode: "retry"
     });
-
-    // Map display names to topic IDs
-    const topicIdMap: { [key: string]: string } = {
-      "arrays": "arrays",
-      "arraylists": "arraylists",
-      "2darrays": "2darrays",
-      "inheritance": "inheritance",
-      "polymorphism": "polymorphism",
-      "recursion": "recursion",
-      "searching": "searching",
-      "sorting": "sorting"
-    };
-
-    // Get the correct topic ID
-    const normalizedTopicName = topic.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const topicId = topicIdMap[normalizedTopicName] || normalizedTopicName;
-
-    // Navigate to practice page with the correct topic ID
+    
+    // Get the topic ID from the question's topic
+    const topicId = currentQuestion.topic.toLowerCase().replace(/[^a-z0-9]/g, '');
     router.push(`/practice/${topicId}?${params.toString()}`);
   };
 
