@@ -1,9 +1,11 @@
 {
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "prebuild": "apt-get update && apt-get install -y openjdk-17-jdk",
     "build": "next build",
-    "start": "next start"
+    "dev": "next dev",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

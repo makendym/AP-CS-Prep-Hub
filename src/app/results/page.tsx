@@ -113,9 +113,9 @@ function ResultsContent() {
                   </Button>
                 )}
               </div>
-            </div>
+        </div>
 
-            <FeedbackView
+        <FeedbackView
               questionType={currentQuestion.type.toLowerCase()}
               isCorrect={currentQuestion.isCorrect}
               explanation={currentQuestion.explanation}
@@ -126,7 +126,7 @@ function ResultsContent() {
               rubricItems={currentQuestion.rubricItems}
               totalPoints={currentQuestion.totalPoints}
               earnedPoints={currentQuestion.earnedPoints}
-            />
+        />
           </>
         )}
       </div>
