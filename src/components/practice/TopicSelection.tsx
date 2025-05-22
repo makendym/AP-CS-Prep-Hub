@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -13,7 +13,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Code, CheckCircle } from "lucide-react";
+import { BookOpen, Code, CheckCircle, Loader2 } from "lucide-react";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 interface TopicStats {
   completed: number;
@@ -39,14 +40,31 @@ export default function TopicSelection({
   onTopicSelect = () => {},
 }: TopicSelectionProps) {
   const router = useRouter();
+  const [loadingTopicId, setLoadingTopicId] = useState<string | null>(null);
+  const [loadingReferenceId, setLoadingReferenceId] = useState<string | null>(
+    null,
+  );
+  const { user } = useAuth();
 
-  const handlePracticeClick = (topicId: string) => {
-    router.push(`/practice/${topicId}`);
-    onTopicSelect(topicId);
+  const handlePracticeClick = async (topicId: string) => {
+    setLoadingTopicId(topicId);
+    try {
+      onTopicSelect(topicId);
+      await router.push(`/practice/${topicId}`);
+    } catch (error) {
+      console.error("Error navigating to practice:", error);
+      setLoadingTopicId(null);
+    }
   };
 
-  const handleReferenceClick = (topicId: string) => {
-    router.push(`/reference/${topicId}`);
+  const handleReferenceClick = async (topicId: string) => {
+    setLoadingReferenceId(topicId);
+    try {
+      await router.push(`/reference/${topicId}`);
+    } catch (error) {
+      console.error("Error navigating to reference:", error);
+      setLoadingReferenceId(null);
+    }
   };
 
   return (
@@ -65,14 +83,13 @@ export default function TopicSelection({
             <Card
               key={topic.id}
               className="hover:shadow-md transition-shadow cursor-pointer border-2 hover:border-primary/50"
-              onClick={() => onTopicSelect(topic.id)}
             >
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div className="p-2 bg-primary/10 rounded-md">
                     {topic.icon}
                   </div>
-                  {topic.stats && (
+                  {user && topic.stats && (
                     <Badge
                       variant={
                         topic.stats.masteryPercentage > 70
@@ -109,15 +126,34 @@ export default function TopicSelection({
               <CardFooter className="flex gap-2">
                 <Button
                   className="flex-1"
-                  onClick={() => handlePracticeClick(topic.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePracticeClick(topic.id);
+                  }}
+                  disabled={loadingTopicId === topic.id}
                 >
-                  Start Practice
+                  {loadingTopicId === topic.id ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    "Start Practice"
+                  )}
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => handleReferenceClick(topic.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleReferenceClick(topic.id);
+                  }}
+                  disabled={loadingReferenceId === topic.id}
                 >
-                  <BookOpen className="h-4 w-4" />
+                  {loadingReferenceId === topic.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <BookOpen className="h-4 w-4" />
+                  )}
                 </Button>
               </CardFooter>
             </Card>

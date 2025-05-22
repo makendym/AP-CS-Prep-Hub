@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -67,6 +68,7 @@ export default function PracticeInterface({
   onSubmit = () => {},
   onComplete = () => {},
 }: PracticeInterfaceProps) {
+  const router = useRouter();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [codeAnswer, setCodeAnswer] = useState<string>("");
@@ -104,7 +106,18 @@ export default function PracticeInterface({
     // Simulate API call delay
     setTimeout(() => {
       setIsSubmitting(false);
-      handleNext();
+      if (currentQuestionIndex < questions.length - 1) {
+        handleNext();
+      } else {
+        // Navigate to feedback view with appropriate parameters
+        const params = new URLSearchParams({
+          type: currentQuestion.type.toLowerCase(),
+          topic: topic,
+          score: "5", // This should be calculated based on actual performance
+          total: "5", // This should be the total possible points
+        });
+        router.push(`/results?${params.toString()}`);
+      }
     }, 1000);
   };
 
@@ -167,7 +180,6 @@ export default function PracticeInterface({
               <CodeEditor
                 initialCode={currentQuestion.codeTemplate || ""}
                 onSubmit={handleCodeChange}
-                language="java"
               />
             )}
           </div>
