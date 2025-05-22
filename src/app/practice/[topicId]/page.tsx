@@ -1,10 +1,11 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import PracticeInterface from "@/components/practice/PracticeInterface";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // Mock questions data - in a real app, this would come from an API or database
 const topicQuestions = {
@@ -133,9 +134,12 @@ const topicQuestions = {
   ],
 };
 
-export default function PracticePage() {
-  const params = useParams();
-  const topicId = params.topicId as string;
+export default function PracticePage({ params }: { params: { topicId: string } }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { topicId } = params;
+  const questionId = searchParams.get("questionId");
+  const mode = searchParams.get("mode");
 
   // Get the topic name for display
   const topicNames: { [key: string]: string } = {
@@ -147,16 +151,110 @@ export default function PracticePage() {
     inheritance: "Inheritance & Interfaces",
   };
 
-  const topicName = topicNames[topicId] || topicId;
+  // Map display names to topic IDs
+  const topicIdMap: { [key: string]: string } = {
+    "arrays": "arrays",
+    "arraylists": "arraylists",
+    "2darrays": "2darrays",
+    "inheritance": "inheritance",
+    "polymorphism": "polymorphism",
+    "recursion": "recursion",
+    "searching": "searching",
+    "sorting": "sorting"
+  };
+
+  // Get the correct topic ID and name
+  const normalizedTopicId = topicId.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const actualTopicId = topicIdMap[normalizedTopicId] || normalizedTopicId;
+  const topicName = topicNames[actualTopicId] || topicId;
 
   // Get questions for this topic
-  const questions =
-    topicQuestions[topicId as keyof typeof topicQuestions] || [];
+  let questions = topicQuestions[actualTopicId as keyof typeof topicQuestions] || [];
 
   const handleSubmit = (questionId: string, answer: string | string[]) => {
     console.log(`Submitted answer for question ${questionId}:`, answer);
     // In a real app, this would send the answer to an API for evaluation
   };
+
+  // If in retry mode and we have a questionId, filter to just that question
+  if (mode === "retry" && questionId) {
+    // Get preserved questions data if available
+    const preservedQuestionsData = searchParams.get("questions");
+    const preservedQuestions = preservedQuestionsData 
+      ? JSON.parse(decodeURIComponent(preservedQuestionsData))
+      : null;
+
+    // Filter to just the question being retried
+    questions = questions.filter(q => q.id === questionId);
+
+    // If we have preserved questions, pass them to PracticeInterface
+    if (preservedQuestions) {
+      return (
+        <div className="min-h-screen bg-background">
+          <div className="container mx-auto py-8 px-4">
+            <div className="mb-6">
+              <Button variant="ghost" asChild className="mb-4">
+                <Link href="/" className="flex items-center">
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  Back to Dashboard
+                </Link>
+              </Button>
+              <h1 className="text-3xl font-bold">Retry Question</h1>
+              <p className="text-muted-foreground mt-2">
+                Try this question again
+              </p>
+            </div>
+
+            {questions.length > 0 ? (
+              <PracticeInterface
+                questions={questions}
+                topic={topicName}
+                onSubmit={(qId, answer) => {
+                  handleSubmit(qId, answer);
+                  // Update the preserved questions with the new answer
+                  const updatedQuestions = preservedQuestions.map((q: any) => {
+                    if (q.id === qId) {
+                      return {
+                        ...q,
+                        selectedOption: answer,
+                        isCorrect: q.type === "MCQ" 
+                          ? answer === q.correctAnswer
+                          : true // For FRQ, this would be evaluated differently
+                      };
+                    }
+                    return q;
+                  });
+                  // Navigate back to results with updated questions
+                  const params = new URLSearchParams({
+                    topic: topicName,
+                    questions: encodeURIComponent(JSON.stringify(updatedQuestions))
+                  });
+                  router.push(`/results?${params.toString()}`);
+                }}
+                onComplete={() => {
+                  // Navigate back to results with preserved questions
+                  const params = new URLSearchParams({
+                    topic: topicName,
+                    questions: encodeURIComponent(JSON.stringify(preservedQuestions))
+                  });
+                  router.push(`/results?${params.toString()}`);
+                }}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-xl text-muted-foreground mb-4">
+                  Question not found. It may have been removed.
+                </p>
+                <Button asChild>
+                  <Link href="/">Return to Dashboard</Link>
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+  }
 
   const handleComplete = () => {
     console.log("Practice session completed");
@@ -173,9 +271,13 @@ export default function PracticePage() {
               Back to Dashboard
             </Link>
           </Button>
-          <h1 className="text-3xl font-bold">{topicName} Practice</h1>
+          <h1 className="text-3xl font-bold">
+            {mode === "retry" ? "Retry Question" : `${topicName} Practice`}
+          </h1>
           <p className="text-muted-foreground mt-2">
-            Complete the following questions to test your knowledge
+            {mode === "retry" 
+              ? "Try this question again"
+              : "Complete the following questions to test your knowledge"}
           </p>
         </div>
 
@@ -189,7 +291,9 @@ export default function PracticePage() {
         ) : (
           <div className="text-center py-12">
             <p className="text-xl text-muted-foreground mb-4">
-              No questions available for this topic yet.
+              {mode === "retry" 
+                ? "Question not found. It may have been removed."
+                : "No questions available for this topic yet."}
             </p>
             <Button asChild>
               <Link href="/">Return to Dashboard</Link>

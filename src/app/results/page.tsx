@@ -5,72 +5,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import FeedbackView from "@/components/practice/FeedbackView";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 function ResultsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
-  // Get result parameters from URL
-  const questionType = (searchParams.get("type") as "mcq" | "frq") || "mcq";
-  const isCorrect = searchParams.get("correct") === "true";
-  const score = searchParams.get("score") || "0";
-  const total = searchParams.get("total") || "0";
+  // Get all questions data from URL
+  const questionsData = searchParams.get("questions");
+  const questions = questionsData ? JSON.parse(decodeURIComponent(questionsData)) : [];
   const topic = searchParams.get("topic") || "";
 
-  // Mock data for the feedback view
-  const mockFeedbackProps = {
-    questionType,
-    isCorrect,
-    explanation:
-      questionType === "mcq"
-        ? "This question tests your understanding of Java syntax and array declaration."
-        : "Your solution correctly implements the required functionality. The enhanced for loop provides a cleaner way to iterate through arrays.",
-    studentCode:
-      "public int countEvens(int[] nums) {\n  int count = 0;\n  for (int i = 0; i < nums.length; i++) {\n    if (nums[i] % 2 == 0) {\n      count++;\n    }\n  }\n  return count;\n}",
-    modelSolution:
-      "public int countEvens(int[] nums) {\n  int count = 0;\n  for (int num : nums) {\n    if (num % 2 == 0) {\n      count++;\n    }\n  }\n  return count;\n}",
-    rubricItems: [
-      {
-        id: "1",
-        description: "Initializes a counter variable",
-        points: 1,
-        achieved: true,
-      },
-      {
-        id: "2",
-        description: "Correctly iterates through the array",
-        points: 1,
-        achieved: true,
-      },
-      {
-        id: "3",
-        description: "Correctly identifies even numbers",
-        points: 1,
-        achieved: true,
-      },
-      {
-        id: "4",
-        description: "Increments counter for even numbers",
-        points: 1,
-        achieved: true,
-      },
-      {
-        id: "5",
-        description: "Returns the correct count",
-        points: 1,
-        achieved: true,
-      },
-      {
-        id: "6",
-        description: "Uses enhanced for loop (preferred but not required)",
-        points: 0,
-        achieved: false,
-      },
-    ],
-    totalPoints: parseInt(total),
-    earnedPoints: parseInt(score),
-  };
+  const currentQuestion = questions[currentQuestionIndex];
 
   useEffect(() => {
     // Simulate loading data
@@ -86,11 +34,44 @@ function ResultsContent() {
   };
 
   const handleRetry = () => {
-    // Navigate back to the practice page for this topic
-    if (topic) {
-      router.push(`/practice/${topic}`);
-    } else {
-      router.push("/");
+    if (!currentQuestion) return;
+
+    // Create URL search params with question ID and mode
+    const params = new URLSearchParams({
+      questionId: currentQuestion.id,
+      mode: "retry",
+      questions: encodeURIComponent(JSON.stringify(questions))
+    });
+
+    // Map display names to topic IDs
+    const topicIdMap: { [key: string]: string } = {
+      "arrays": "arrays",
+      "arraylists": "arraylists",
+      "2darrays": "2darrays",
+      "inheritance": "inheritance",
+      "polymorphism": "polymorphism",
+      "recursion": "recursion",
+      "searching": "searching",
+      "sorting": "sorting"
+    };
+
+    // Get the correct topic ID
+    const normalizedTopicName = topic.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const topicId = topicIdMap[normalizedTopicName] || normalizedTopicName;
+
+    // Navigate to practice page with the correct topic ID
+    router.push(`/practice/${topicId}?${params.toString()}`);
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
     }
   };
 
@@ -113,11 +94,57 @@ function ResultsContent() {
           </Button>
         </div>
 
-        <FeedbackView
-          {...mockFeedbackProps}
-          onContinue={handleContinue}
-          onRetry={handleRetry}
-        />
+        {currentQuestion && (
+          <>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">
+                Question {currentQuestionIndex + 1} of {questions.length}
+              </h2>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleRetry}
+                >
+                  Try Again
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handlePrevious}
+                  disabled={currentQuestionIndex === 0}
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleNext}
+                  disabled={currentQuestionIndex === questions.length - 1}
+                >
+                  Next
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+                {currentQuestionIndex === questions.length - 1 && (
+                  <Button onClick={handleContinue}>
+                    Finish
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <FeedbackView
+              questionType={currentQuestion.type.toLowerCase()}
+              isCorrect={currentQuestion.isCorrect}
+              explanation={currentQuestion.explanation}
+              selectedOption={currentQuestion.selectedOption}
+              correctAnswer={currentQuestion.correctAnswer}
+              studentCode={currentQuestion.studentCode}
+              modelSolution={currentQuestion.modelSolution}
+              rubricItems={currentQuestion.rubricItems}
+              totalPoints={currentQuestion.totalPoints}
+              earnedPoints={currentQuestion.earnedPoints}
+            />
+          </>
+        )}
       </div>
     </div>
   );
@@ -125,9 +152,13 @@ function ResultsContent() {
 
 export default function ResultsPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-      <p>Loading results...</p>
-    </div>}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <p>Loading results...</p>
+        </div>
+      }
+    >
       <ResultsContent />
     </Suspense>
   );

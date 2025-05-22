@@ -25,19 +25,21 @@ interface FeedbackViewProps {
   questionType: "mcq" | "frq";
   isCorrect?: boolean;
   explanation?: string;
+  selectedOption?: string;
+  correctAnswer?: string;
   studentCode?: string;
   modelSolution?: string;
   rubricItems?: RubricItem[];
   totalPoints?: number;
   earnedPoints?: number;
-  onContinue?: () => void;
-  onRetry?: () => void;
 }
 
 export default function FeedbackView({
   questionType = "mcq",
   isCorrect = false,
   explanation = "This question tests your understanding of array traversal and conditional logic.",
+  selectedOption = "No answer selected",
+  correctAnswer = "The correct answer",
   studentCode = "public int countEvens(int[] nums) {\n  int count = 0;\n  for (int i = 0; i < nums.length; i++) {\n    if (nums[i] % 2 == 0) {\n      count++;\n    }\n  }\n  return count;\n}",
   modelSolution = "public int countEvens(int[] nums) {\n  int count = 0;\n  for (int num : nums) {\n    if (num % 2 == 0) {\n      count++;\n    }\n  }\n  return count;\n}",
   rubricItems = [
@@ -80,8 +82,6 @@ export default function FeedbackView({
   ],
   totalPoints = 5,
   earnedPoints = 5,
-  onContinue = () => {},
-  onRetry = () => {},
 }: FeedbackViewProps) {
   return (
     <div className="w-full max-w-4xl mx-auto p-4 bg-background">
@@ -107,14 +107,6 @@ export default function FeedbackView({
               : "Code Evaluation"}
           </h1>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onRetry}>
-            Try Again
-          </Button>
-          <Button onClick={onContinue}>
-            Continue <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
       </div>
 
       {/* MCQ Feedback */}
@@ -124,7 +116,26 @@ export default function FeedbackView({
             <CardTitle>Explanation</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">{explanation}</p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Your answer:</span>
+                <span className={isCorrect ? "text-green-500" : "text-red-500"}>
+                  {selectedOption || "No answer selected"}
+                </span>
+              </div>
+
+              {!isCorrect && (
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Correct answer:</span>
+                  <span className="text-green-500">{correctAnswer}</span>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <h3 className="font-medium mb-2">Explanation:</h3>
+                <p className="text-muted-foreground">{explanation}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

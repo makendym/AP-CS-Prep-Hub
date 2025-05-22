@@ -73,6 +73,7 @@ export default function PracticeInterface({
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [codeAnswer, setCodeAnswer] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [answeredQuestions, setAnsweredQuestions] = useState<any[]>([]);
 
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
@@ -96,6 +97,57 @@ export default function PracticeInterface({
   const handleSubmit = () => {
     setIsSubmitting(true);
 
+    // Create answer data for current question
+    const answerData = {
+      ...currentQuestion, // Include all question data
+      isCorrect: currentQuestion.type === "MCQ" 
+        ? selectedOption === currentQuestion.correctAnswer
+        : true, // This should be evaluated based on code submission
+      selectedOption: currentQuestion.type === "MCQ" ? selectedOption : undefined,
+      studentCode: currentQuestion.type === "FRQ" ? codeAnswer : undefined,
+      explanation: currentQuestion.type === "MCQ"
+        ? "This question tests your understanding of Java syntax and array declaration."
+        : "Your solution correctly implements the required functionality.",
+      rubricItems: currentQuestion.type === "FRQ" ? [
+        {
+          id: "1",
+          description: "Initializes a counter variable",
+          points: 1,
+          achieved: true,
+        },
+        {
+          id: "2",
+          description: "Correctly iterates through the array",
+          points: 1,
+          achieved: true,
+        },
+        {
+          id: "3",
+          description: "Correctly identifies even numbers",
+          points: 1,
+          achieved: true,
+        },
+        {
+          id: "4",
+          description: "Increments counter for even numbers",
+          points: 1,
+          achieved: true,
+        },
+        {
+          id: "5",
+          description: "Returns the correct count",
+          points: 1,
+          achieved: true,
+        },
+      ] : undefined,
+      totalPoints: 5,
+      earnedPoints: 5,
+    };
+
+    // Add to answered questions
+    const newAnsweredQuestions = [...answeredQuestions, answerData];
+    setAnsweredQuestions(newAnsweredQuestions);
+
     // Submit the answer based on question type
     if (currentQuestion.type === "MCQ") {
       onSubmit(currentQuestion.id, selectedOption);
@@ -109,12 +161,10 @@ export default function PracticeInterface({
       if (currentQuestionIndex < questions.length - 1) {
         handleNext();
       } else {
-        // Navigate to feedback view with appropriate parameters
+        // Navigate to feedback view with all questions data
         const params = new URLSearchParams({
-          type: currentQuestion.type.toLowerCase(),
           topic: topic,
-          score: "5", // This should be calculated based on actual performance
-          total: "5", // This should be the total possible points
+          questions: encodeURIComponent(JSON.stringify(newAnsweredQuestions))
         });
         router.push(`/results?${params.toString()}`);
       }
