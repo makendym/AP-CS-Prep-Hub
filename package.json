@@ -1,11 +1,9 @@
 {
   "private": true,
   "scripts": {
-    "prebuild": "apt-get update && apt-get install -y openjdk-17-jdk",
-    "build": "next build",
     "dev": "next dev",
-    "start": "next start",
-    "lint": "next lint"
+    "build": "next build",
+    "start": "next start"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -39,7 +37,7 @@
     "react-hook-form": "^7.54.2",
     "react-resizable-panels": "^2.1.7",
     "stripe": "^17.6.0",
-    "tempo-devtools": "^2.0.105",
+    "tempo-devtools": "^2.0.106",
     "uuid": "^11.1.0",
     "vaul": "^1.1.2"
   },

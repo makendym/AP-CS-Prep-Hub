@@ -167,7 +167,7 @@ const CodeEditor = ({
 }`;
       
       try {
-        const response = await fetch('/api/execute', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

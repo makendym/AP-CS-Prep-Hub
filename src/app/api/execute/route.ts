@@ -7,16 +7,6 @@ import { v4 as uuidv4 } from 'uuid';
 
 const execAsync = promisify(exec);
 
-async function checkJavaInstallation() {
-  try {
-    await execAsync('java -version');
-    await execAsync('javac -version');
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
 export async function POST(req: Request) {
   try {
     const { code } = await req.json();
@@ -26,15 +16,6 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Code is required' },
         { status: 400 }
-      );
-    }
-
-    // Check if Java is installed
-    const isJavaInstalled = await checkJavaInstallation();
-    if (!isJavaInstalled) {
-      return NextResponse.json(
-        { error: 'Java runtime is not available. Please contact support.' },
-        { status: 500 }
       );
     }
 
