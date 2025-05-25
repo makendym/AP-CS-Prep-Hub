@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Code, CheckCircle, Loader2 } from "lucide-react";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useAuth } from "@/components/auth/AuthContext";
 
 interface TopicStats {
   completed: number;

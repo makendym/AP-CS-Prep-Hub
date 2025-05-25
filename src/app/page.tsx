@@ -14,17 +14,61 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, BarChart2, Code, CheckCircle, LogIn } from "lucide-react";
 import TopicSelection from "@/components/practice/TopicSelection";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useAuth } from "@/components/auth/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
+import { User } from "@supabase/supabase-js";
+
+interface UserProgress {
+  completedQuestions?: number;
+  totalQuestions?: number;
+  mcqsCorrect?: string;
+  frqsAttempted?: string;
+  studyTime?: string;
+  strongTopics?: string[];
+  weakTopics?: string[];
+}
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("topics");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const { user, login, loginWithGoogle, register, logout, isLoading } =
-    useAuth();
+  const { user: supabaseUser, login, loginWithGoogle, register, logout, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
+
+  useEffect(() => {
+    if (supabaseUser) {
+      // In a real app, you would fetch progress from your DB here
+      // For now, let's simulate fetching or use mock data
+      const mockProgress: UserProgress = {
+        completedQuestions: Math.floor(Math.random() * 20),
+        totalQuestions: 50,
+        mcqsCorrect: `${Math.floor(Math.random() * 100)}%`,
+        frqsAttempted: String(Math.floor(Math.random() * 10)),
+        studyTime: `${Math.floor(Math.random() * 10)} hrs`,
+        strongTopics: getRandomTopics(),
+        weakTopics: getRandomTopics(),
+      };
+      setUserProgress(mockProgress);
+    } else {
+      setUserProgress(null);
+    }
+  }, [supabaseUser]);
+
+  const getRandomTopics = () => {
+    const allTopics = [
+      "Arrays",
+      "Loops",
+      "Object-Oriented Programming",
+      "Inheritance",
+      "Recursion",
+      "Sorting & Searching",
+    ];
+    return allTopics
+      .sort(() => 0.5 - Math.random())
+      .slice(0, Math.floor(Math.random() * 3) + 1);
+  };
 
   useEffect(() => {
     // Simulate initial page load
@@ -35,7 +79,6 @@ export default function Dashboard() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Handle tab changes with loading state
   const handleTabChange = (value: string) => {
     setIsTransitioning(true);
     setActiveTab(value);
@@ -46,26 +89,26 @@ export default function Dashboard() {
   };
 
   // Generate stats based on user data or default values
-  const stats = user
+  const stats = userProgress
     ? [
         {
           name: "Completed",
-          value: `${user?.progress?.completedQuestions || 0}/${user?.progress?.totalQuestions || 50}`,
+          value: `${userProgress.completedQuestions || 0}/${userProgress.totalQuestions || 50}`,
           icon: CheckCircle,
         },
         {
           name: "MCQs Correct",
-          value: user?.progress?.mcqsCorrect || "0%",
+          value: userProgress.mcqsCorrect || "0%",
           icon: BarChart2,
         },
         {
           name: "FRQs Attempted",
-          value: user?.progress?.frqsAttempted || "0",
+          value: userProgress.frqsAttempted || "0",
           icon: Code,
         },
         {
           name: "Study Time",
-          value: user?.progress?.studyTime || "0 hrs",
+          value: userProgress.studyTime || "0 hrs",
           icon: BookOpen,
         },
       ]
@@ -75,6 +118,14 @@ export default function Dashboard() {
         { name: "FRQs Attempted", value: "0", icon: Code },
         { name: "Study Time", value: "0 hrs", icon: BookOpen },
       ];
+
+  // Default user progress data (still needed for type consistency if userProgress is null)
+  const defaultProgress: UserProgress = { // Added type annotation
+    completedQuestions: 0,
+    totalQuestions: 50,
+    strongTopics: [],
+    weakTopics: [],
+  };
 
   const handleLogin = async (email: string, password: string) => {
     await login(email, password);
@@ -92,21 +143,8 @@ export default function Dashboard() {
     logout();
   };
 
-  // Default user progress data
-  const defaultProgress = {
-    completedQuestions: 0,
-    totalQuestions: 50,
-    strongTopics: [],
-    weakTopics: [],
-  };
-
-  // Use user data if available, otherwise use default
-  const userProgress = (user?.progress ||
-    defaultProgress) as typeof defaultProgress;
-
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto py-4 px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
@@ -121,10 +159,10 @@ export default function Dashboard() {
               >
                 Pricing
               </Button>
-              {user ? (
+              {supabaseUser ? (
                 <>
                   <span className="text-sm text-muted-foreground">
-                    Welcome, {user.name}
+                    Welcome, {supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0]}
                   </span>
                   <Button variant="outline" size="sm">
                     Profile
@@ -149,11 +187,9 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 container mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {(isPageLoading || isTransitioning) ? (
+          {(isPageLoading || isTransitioning || isAuthLoading) ? (
             Array(4).fill(0).map((_, index) => (
               <Card key={index} className="bg-card">
                 <CardContent className="p-6">
@@ -179,7 +215,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Main Tabs */}
         <Tabs
           defaultValue="topics"
           className="w-full"
@@ -191,7 +226,6 @@ export default function Dashboard() {
             <TabsTrigger value="progress">My Progress</TabsTrigger>
           </TabsList>
 
-          {/* Topics Tab */}
           <TabsContent value="topics" className="space-y-4">
             {(isPageLoading || isTransitioning) ? (
               <>
@@ -242,7 +276,6 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
-          {/* Reference Cards Tab */}
           <TabsContent value="reference" className="space-y-4">
             {(isPageLoading || isTransitioning) ? (
               <>
@@ -295,9 +328,8 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
-          {/* Progress Tab */}
           <TabsContent value="progress" className="space-y-4">
-            {(isPageLoading || isTransitioning) ? (
+            {(isPageLoading || isTransitioning || isAuthLoading) ? (
               <>
                 <Skeleton className="h-8 w-48 mb-6" />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -312,7 +344,7 @@ export default function Dashboard() {
                   ))}
                 </div>
               </>
-            ) : !user ? (
+            ) : !supabaseUser ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <h3 className="text-xl font-medium mb-4">
@@ -327,6 +359,10 @@ export default function Dashboard() {
                   </Button>
                 </CardContent>
               </Card>
+            ) : userProgress === null ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Loading progress data...</p>
+              </div>
             ) : (
               <>
                 <h2 className="text-xl font-semibold mb-6">Your Progress</h2>
@@ -341,7 +377,7 @@ export default function Dashboard() {
                     <CardContent>
                       <div className="h-64 flex items-center justify-center border rounded-md">
                         <p className="text-muted-foreground">
-                          {userProgress.completedQuestions > 0
+                          {(userProgress?.completedQuestions || 0) > 0
                             ? "Performance chart will appear here"
                             : "Complete some practice questions to see your performance chart"}
                         </p>
@@ -360,7 +396,7 @@ export default function Dashboard() {
                           <h3 className="font-medium mb-2">
                             Strong Topics
                           </h3>
-                          {userProgress.strongTopics &&
+                          {userProgress?.strongTopics &&
                           userProgress.strongTopics.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {userProgress.strongTopics.map((topic, i) => (
@@ -383,7 +419,7 @@ export default function Dashboard() {
                           <h3 className="font-medium mb-2">
                             Needs Improvement
                           </h3>
-                          {userProgress.weakTopics &&
+                          {userProgress?.weakTopics &&
                           userProgress.weakTopics.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {userProgress.weakTopics.map((topic, i) => (
@@ -414,7 +450,7 @@ export default function Dashboard() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      {userProgress.completedQuestions > 0 ? (
+                      {(userProgress?.completedQuestions || 0) > 0 ? (
                         <div className="border rounded-md divide-y">
                           {[1, 2, 3].map((_, i) => (
                             <div
@@ -471,14 +507,12 @@ export default function Dashboard() {
         </Tabs>
       </main>
 
-      {/* Footer */}
       <footer className="border-t bg-card">
         <div className="container mx-auto py-4 px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
           <p>AP CS Exam Prep App &copy; {new Date().getFullYear()}</p>
         </div>
       </footer>
 
-      {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
