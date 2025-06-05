@@ -13,8 +13,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Code, CheckCircle, Loader2 } from "lucide-react";
+import { BookOpen, Code, CheckCircle, Loader2, Sparkles } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthContext";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface TopicStats {
   completed: number;
@@ -44,13 +46,16 @@ export default function TopicSelection({
   const [loadingReferenceId, setLoadingReferenceId] = useState<string | null>(
     null,
   );
+  const [includeAIGenerated, setIncludeAIGenerated] = useState(false);
   const { user } = useAuth();
 
   const handlePracticeClick = async (topicId: string) => {
     setLoadingTopicId(topicId);
     try {
       onTopicSelect(topicId);
-      await router.push(`/practice/${topicId}`);
+      const searchParams = new URLSearchParams();
+      searchParams.set("source", includeAIGenerated ? "ai-generated" : "official");
+      await router.push(`/practice/${topicId}/select-options?${searchParams.toString()}`);
     } catch (error) {
       console.error("Error navigating to practice:", error);
       setLoadingTopicId(null);
@@ -71,11 +76,26 @@ export default function TopicSelection({
     <div className="bg-background w-full py-6">
       <div className="container mx-auto">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">Practice by Topic</h2>
-          <p className="text-muted-foreground">
-            Select a computer science topic to practice questions related to
-            that area.
-          </p>
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-3xl font-bold mb-2">Practice by Topic</h2>
+              <p className="text-muted-foreground">
+                Select a computer science topic to practice questions related to
+                that area.
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="ai-generated"
+                checked={includeAIGenerated}
+                onCheckedChange={setIncludeAIGenerated}
+              />
+              <Label htmlFor="ai-generated" className="flex items-center gap-2 cursor-pointer">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Practice with AI Questions
+              </Label>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

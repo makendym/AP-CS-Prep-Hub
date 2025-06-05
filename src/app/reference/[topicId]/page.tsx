@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { BackToDashboard } from "@/components/ui/back-to-dashboard";
 
 // Reference content for each topic
 const topicReferences = {
@@ -166,12 +167,7 @@ export default function ReferenceTopicPage() {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto py-8 px-4">
-          <Button variant="ghost" asChild className="mb-4">
-            <Link href="/" className="flex items-center">
-              <ChevronLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
-            </Link>
-          </Button>
+          <BackToDashboard />
           <div className="text-center py-12">
             <p className="text-xl text-muted-foreground mb-4">
               Reference information for this topic is not available yet.
@@ -189,12 +185,7 @@ export default function ReferenceTopicPage() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
         <div className="mb-6">
-          <Button variant="ghost" asChild className="mb-4">
-            <Link href="/" className="flex items-center">
-              <ChevronLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
-            </Link>
-          </Button>
+          <BackToDashboard />
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold flex items-center">

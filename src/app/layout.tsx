@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import { AuthProvider } from "@/components/auth/AuthContext";
+import { SubscriptionProvider } from "@/components/subscription/SubscriptionContext";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -23,8 +24,10 @@ export default function RootLayout({
       <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
       <body className={inter.className}>
         <AuthProvider>
+          <SubscriptionProvider>
           {children}
           <TempoInit />
+          </SubscriptionProvider>
         </AuthProvider>
       </body>
     </html>

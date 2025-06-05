@@ -8,11 +8,19 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, BarChart2, Code, CheckCircle, LogIn } from "lucide-react";
+import {
+  BookOpen,
+  BarChart2,
+  Code,
+  CheckCircle,
+  LogIn,
+  Loader2,
+} from "lucide-react";
 import TopicSelection from "@/components/practice/TopicSelection";
 import { useAuth } from "@/components/auth/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
@@ -31,11 +39,21 @@ interface UserProgress {
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("topics");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const { user: supabaseUser, login, loginWithGoogle, register, logout, isLoading: isAuthLoading } = useAuth();
+  const {
+    user: supabaseUser,
+    login,
+    loginWithGoogle,
+    register,
+    logout,
+    isLoading: isAuthLoading,
+  } = useAuth();
   const router = useRouter();
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
+  const [isNavigatingToPricing, setIsNavigatingToPricing] = useState(false);
+  const [isNavigatingToProfile, setIsNavigatingToProfile] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     if (supabaseUser) {
@@ -120,7 +138,8 @@ export default function Dashboard() {
       ];
 
   // Default user progress data (still needed for type consistency if userProgress is null)
-  const defaultProgress: UserProgress = { // Added type annotation
+  const defaultProgress: UserProgress = {
+    // Added type annotation
     completedQuestions: 0,
     totalQuestions: 50,
     strongTopics: [],
@@ -139,37 +158,207 @@ export default function Dashboard() {
     await register(email, password, name);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    setTimeout(async () => {
+      await logout();
+      setIsLoggingOut(false);
+    }, 500);
   };
+
+  // Add navigation handler with delay
+  const handleNavigation = (
+    path: string,
+    setLoadingState: (value: boolean) => void,
+  ) => {
+    setLoadingState(true);
+    setTimeout(() => {
+      router.push(path);
+    }, 500);
+  };
+
+  if (isPageLoading || isAuthLoading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background">
+        {/* Header Skeleton */}
+        <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+          <div className="container mx-auto">
+            <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+              {/* Left side - Branding Skeleton */}
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col">
+                  <Skeleton className="h-6 w-32 mb-1" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+                <div className="hidden sm:block h-6 w-px bg-border mx-2" />
+                <div className="hidden sm:flex items-center gap-4">
+                  <Skeleton className="h-9 w-20" />
+                </div>
+              </div>
+
+              {/* Right side - Auth Skeleton */}
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-9 w-24" />
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 container mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          {/* Stats Grid Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {Array(4).fill(0).map((_, index) => (
+              <Card key={index} className="bg-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Skeleton className="h-5 w-24 mb-2" />
+                      <Skeleton className="h-8 w-16" />
+                    </div>
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Tabs Skeleton */}
+          <div className="w-full max-w-md mx-auto mb-8">
+            <Skeleton className="h-10 w-full" />
+          </div>
+
+          {/* Content Skeleton */}
+          <div className="space-y-8">
+            {/* Topics Tab Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array(6).fill(0).map((_, index) => (
+                <Card key={index} className="bg-card">
+                  <CardHeader>
+                    <Skeleton className="h-6 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-2/3" />
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                      <Skeleton className="h-9 w-24" />
+                      <Skeleton className="h-9 w-9" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </main>
+
+        {/* Footer Skeleton */}
+        <footer className="border-t bg-card">
+          <div className="container mx-auto py-4 px-4 sm:px-6 lg:px-8 text-center">
+            <Skeleton className="h-4 w-48 mx-auto" />
+          </div>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto py-4 px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-foreground">
-              AP CS Exam Prep
-            </h1>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push("/pricing")}
-              >
-                Pricing
-              </Button>
+      <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+        <div className="container mx-auto">
+          <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+            {/* Left side - Enhanced Branding */}
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col">
+                <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                  AP CompTutor
+                </h1>
+                <p className="text-xs text-muted-foreground -mt-1 hidden sm:block">
+                  Master AP Computer Science A
+                </p>
+              </div>
+              <div className="hidden sm:block h-6 w-px bg-border mx-2" />
+              <nav className="hidden sm:flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    handleNavigation("/pricing", setIsNavigatingToPricing)
+                  }
+                  className="text-muted-foreground hover:text-foreground"
+                  disabled={
+                    isNavigatingToPricing ||
+                    isNavigatingToProfile ||
+                    isLoggingOut
+                  }
+                >
+                  {isNavigatingToPricing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Loading...</span>
+                    </>
+                  ) : (
+                    "Pricing"
+                  )}
+                </Button>
+              </nav>
+            </div>
+
+            {/* Right side - Auth */}
+            <div className="flex items-center gap-3">
               {supabaseUser ? (
                 <>
-                  <span className="text-sm text-muted-foreground">
-                    Welcome, {supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0]}
-                  </span>
-                  <Button variant="outline" size="sm">
-                    Profile
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      handleNavigation("/profile", setIsNavigatingToProfile)
+                    }
+                    className="text-muted-foreground hover:text-foreground"
+                    disabled={
+                      isNavigatingToPricing ||
+                      isNavigatingToProfile ||
+                      isLoggingOut
+                    }
+                  >
+                    {isNavigatingToProfile ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        <span>Loading...</span>
+                      </>
+                    ) : (
+                      "Profile"
+                    )}
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleLogout}>
-                    Logout
-                  </Button>
+                  <div className="hidden sm:block h-6 w-px bg-border" />
+                  <div className="flex items-center gap-3">
+                    <span className="hidden sm:inline-block text-sm text-muted-foreground">
+                      {supabaseUser.user_metadata?.full_name ||
+                        supabaseUser.user_metadata?.name ||
+                        supabaseUser.email?.split("@")[0]}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleLogout}
+                      className="text-muted-foreground hover:text-foreground"
+                      disabled={
+                        isNavigatingToPricing ||
+                        isNavigatingToProfile ||
+                        isLoggingOut
+                      }
+                    >
+                      {isLoggingOut ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          <span>Logging out...</span>
+                        </>
+                      ) : (
+                        "Logout"
+                      )}
+                    </Button>
+                  </div>
                 </>
               ) : (
                 <Button
@@ -177,9 +366,15 @@ export default function Dashboard() {
                   size="sm"
                   onClick={() => setIsAuthModalOpen(true)}
                   className="flex items-center gap-2"
+                  disabled={
+                    isNavigatingToPricing ||
+                    isNavigatingToProfile ||
+                    isLoggingOut
+                  }
                 >
                   <LogIn size={16} />
-                  Login / Register
+                  <span className="hidden sm:inline">Sign In</span>
+                  <span className="sm:hidden">Login</span>
                 </Button>
               )}
             </div>
@@ -189,30 +384,19 @@ export default function Dashboard() {
 
       <main className="flex-1 container mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {(isPageLoading || isTransitioning || isAuthLoading) ? (
-            Array(4).fill(0).map((_, index) => (
-              <Card key={index} className="bg-card">
-                <CardContent className="p-6">
-                  <Skeleton className="h-8 w-24 mb-2" />
-                  <Skeleton className="h-6 w-16" />
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            stats.map((stat, index) => (
-              <Card key={index} className="bg-card">
-                <CardContent className="p-6 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {stat.name}
-                    </p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                  </div>
-                  <stat.icon className="h-8 w-8 text-primary opacity-80" />
-                </CardContent>
-              </Card>
-            ))
-          )}
+          {stats.map((stat, index) => (
+            <Card key={index} className="bg-card">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {stat.name}
+                  </p>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                </div>
+                <stat.icon className="h-8 w-8 text-primary opacity-80" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <Tabs
@@ -226,70 +410,77 @@ export default function Dashboard() {
             <TabsTrigger value="progress">My Progress</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="topics" className="space-y-4">
-            {(isPageLoading || isTransitioning) ? (
-              <>
-                <div className="flex justify-between items-center mb-6">
-                  <Skeleton className="h-8 w-64" />
-                  <div className="flex gap-2">
-                    <Skeleton className="h-9 w-24" />
-                    <Skeleton className="h-9 w-24" />
-                    <Skeleton className="h-9 w-32" />
+          <TabsContent value="topics" className="space-y-8">
+            {isPageLoading || isTransitioning ? (
+              <div className="space-y-8">
+                {/* Header Skeleton */}
+                <div className="mb-8">
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <Skeleton className="h-8 w-64 mb-2" />
+                      <Skeleton className="h-4 w-96" />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Skeleton className="h-6 w-6" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
                   </div>
                 </div>
+
+                {/* Topics Grid Skeleton */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {Array(6).fill(0).map((_, index) => (
-                    <Card key={index} className="bg-card">
-                      <CardContent className="p-6">
-                        <Skeleton className="h-6 w-3/4 mb-4" />
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-4 w-2/3" />
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <Card key={i} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-start">
+                          <Skeleton className="h-10 w-10 rounded-md" />
+                          <Skeleton className="h-6 w-20" />
+                        </div>
+                        <Skeleton className="h-6 w-48 mt-4" />
+                        <Skeleton className="h-4 w-64 mt-2" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <Skeleton className="h-4 w-20" />
+                            <Skeleton className="h-4 w-24" />
+                          </div>
+                          <Skeleton className="h-2 w-full" />
+                        </div>
                       </CardContent>
+                      <CardFooter className="flex gap-2">
+                        <Skeleton className="h-10 flex-1" />
+                        <Skeleton className="h-10 w-10" />
+                      </CardFooter>
                     </Card>
                   ))}
                 </div>
-              </>
+              </div>
             ) : (
-              <>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold">
-                    Select a Topic to Practice
-                  </h2>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      MCQ Mode
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      FRQ Mode
-                    </Button>
-                    <Button variant="default" size="sm">
-                      Random Practice
-                    </Button>
-                  </div>
-                </div>
-                <TopicSelection
-                  onTopicSelect={(topicId) => {
-                    console.log(`Selected topic: ${topicId}`);
-                  }}
-                />
-              </>
+              <TopicSelection
+                onTopicSelect={(topicId) => {
+                  router.push(`/practice/${topicId}`);
+                }}
+              />
             )}
           </TabsContent>
 
           <TabsContent value="reference" className="space-y-4">
-            {(isPageLoading || isTransitioning) ? (
+            {isPageLoading || isTransitioning ? (
               <>
                 <Skeleton className="h-8 w-64 mb-6" />
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {Array(6).fill(0).map((_, index) => (
-                    <Card key={index} className="bg-card">
-                      <CardContent className="p-6">
-                        <Skeleton className="h-6 w-3/4 mb-4" />
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-4 w-2/3" />
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {Array(6)
+                    .fill(0)
+                    .map((_, index) => (
+                      <Card key={index} className="bg-card">
+                        <CardContent className="p-6">
+                          <Skeleton className="h-6 w-3/4 mb-4" />
+                          <Skeleton className="h-4 w-full mb-2" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </CardContent>
+                      </Card>
+                    ))}
                 </div>
               </>
             ) : (
@@ -313,7 +504,9 @@ export default function Dashboard() {
                     >
                       <CardHeader>
                         <CardTitle>{topic.name}</CardTitle>
-                        <CardDescription>Key concepts and examples</CardDescription>
+                        <CardDescription>
+                          Key concepts and examples
+                        </CardDescription>
                       </CardHeader>
                       <CardContent>
                         <p className="text-sm text-muted-foreground">
@@ -329,19 +522,24 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="progress" className="space-y-4">
-            {(isPageLoading || isTransitioning || isAuthLoading) ? (
+            {isPageLoading || isTransitioning || isAuthLoading ? (
               <>
                 <Skeleton className="h-8 w-48 mb-6" />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {Array(3).fill(0).map((_, index) => (
-                    <Card key={index} className={index === 2 ? "lg:col-span-2" : ""}>
-                      <CardContent className="p-6">
-                        <Skeleton className="h-6 w-3/4 mb-4" />
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-4 w-2/3" />
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {Array(3)
+                    .fill(0)
+                    .map((_, index) => (
+                      <Card
+                        key={index}
+                        className={index === 2 ? "lg:col-span-2" : ""}
+                      >
+                        <CardContent className="p-6">
+                          <Skeleton className="h-6 w-3/4 mb-4" />
+                          <Skeleton className="h-4 w-full mb-2" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </CardContent>
+                      </Card>
+                    ))}
                 </div>
               </>
             ) : !supabaseUser ? (
@@ -351,8 +549,8 @@ export default function Dashboard() {
                     Login to Track Your Progress
                   </h3>
                   <p className="text-muted-foreground mb-6">
-                    Create an account or login to save your practice results
-                    and track your progress over time.
+                    Create an account or login to save your practice results and
+                    track your progress over time.
                   </p>
                   <Button onClick={() => setIsAuthModalOpen(true)}>
                     Login / Register
@@ -393,9 +591,7 @@ export default function Dashboard() {
                     <CardContent>
                       <div className="space-y-4">
                         <div>
-                          <h3 className="font-medium mb-2">
-                            Strong Topics
-                          </h3>
+                          <h3 className="font-medium mb-2">Strong Topics</h3>
                           {userProgress?.strongTopics &&
                           userProgress.strongTopics.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
@@ -410,8 +606,7 @@ export default function Dashboard() {
                             </div>
                           ) : (
                             <p className="text-sm text-muted-foreground">
-                              Complete more practice to identify your
-                              strengths
+                              Complete more practice to identify your strengths
                             </p>
                           )}
                         </div>
@@ -463,13 +658,7 @@ export default function Dashboard() {
                                   {["Arrays", "Inheritance", "Loops"][i]}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  {
-                                    [
-                                      "Yesterday",
-                                      "2 days ago",
-                                      "1 week ago",
-                                    ][i]
-                                  }
+                                  {["Yesterday", "2 days ago", "1 week ago"][i]}
                                 </p>
                               </div>
                               <div className="text-right">

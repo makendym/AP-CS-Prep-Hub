@@ -6,6 +6,7 @@ import FeedbackView from "@/components/practice/FeedbackView";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BackToDashboard } from "@/components/ui/back-to-dashboard";
 
 function ResultsContent() {
   const router = useRouter();
@@ -71,11 +72,7 @@ function ResultsContent() {
     <div className="min-h-screen bg-background py-8">
       <div className="container mx-auto px-4">
         <div className="mb-6">
-          <Button variant="ghost" asChild className="mb-4">
-            <Link href="/" className="flex items-center">
-              <span>Back to Dashboard</span>
-            </Link>
-          </Button>
+          <BackToDashboard />
         </div>
 
         {currentQuestion && (
