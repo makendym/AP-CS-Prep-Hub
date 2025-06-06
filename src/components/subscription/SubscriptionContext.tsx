@@ -7,16 +7,21 @@ import { supabase } from "@/lib/supabase";
 export type SubscriptionStatus = "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "incomplete_expired" | "inactive" | null;
 export type PlanType = "free" | "trial" | "student" | "student_yearly" | "classroom" | null;
 
-export type Subscription = {
-  status: SubscriptionStatus;
-  planType: PlanType;
-  currentPeriodEnd: string;
-  subscriptionId: string;
-  cancel_at_period_end: boolean;
+export interface Subscription {
+  id: string;
+  user_id: string;
   plan_type: PlanType;
-  current_period_end: string;
+  stripe_customer_id: string | null;
+  status: SubscriptionStatus;
+  current_period_end: string | null;
   created_at: string;
-} | null;
+  updated_at: string;
+  trial_started_at: string | null;
+  trial_ended_at: string | null;
+  can_downgrade: boolean;
+  downgrade_available_at: string | null;
+  cancel_at_period_end: boolean;
+}
 
 type SubscriptionContextType = {
   subscription: Subscription | null;
@@ -28,29 +33,36 @@ type SubscriptionContextType = {
   hasPremiumAccess: boolean;
 };
 
-const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
+export const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
-  const [subscription, setSubscription] = useState<Subscription>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const { user } = useAuth();
 
-  const isInTrialPeriod = subscription?.planType === "trial" && 
+  const isInTrialPeriod = Boolean(
+    subscription?.plan_type === "trial" && 
     subscription?.status === "active" && 
-    new Date(subscription.currentPeriodEnd) > new Date();
+    subscription?.current_period_end && 
+    new Date(subscription.current_period_end) > new Date()
+  );
 
-  const hasPremiumAccess = subscription?.status === "active" && 
-    (subscription?.planType === "student" || 
-     subscription?.planType === "student_yearly" ||
-     subscription?.planType === "classroom" || 
-     isInTrialPeriod);
+  const hasPremiumAccess = Boolean(
+    subscription?.status === "active" && 
+    (subscription?.plan_type === "student" || 
+     subscription?.plan_type === "student_yearly" ||
+     subscription?.plan_type === "classroom" || 
+     isInTrialPeriod)
+  );
 
   // Add real-time subscription updates
   useEffect(() => {
-    if (!user) return;
-
-    console.log('Setting up real-time subscription for user:', user.id);
+    if (!user) {
+      setSubscription(null);
+      setIsLoading(false);
+      return;
+    }
 
     // Set up real-time subscription for the user
     const subscriptionChannel = supabase
@@ -64,8 +76,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
-          console.log('Real-time subscription update:', payload);
-          // Refresh subscription data when changes occur
           await fetchSubscription();
         }
       )
@@ -83,12 +93,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           filter: `id=eq.${user.id}`,
         },
         async (payload) => {
-          console.log('Real-time profile update:', payload);
-          // Refresh subscription data when profile changes
           await fetchSubscription();
         }
       )
       .subscribe();
+
+    // Initial fetch
+    fetchSubscription();
 
     return () => {
       subscriptionChannel.unsubscribe();
@@ -97,122 +108,118 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, [user]);
 
   const fetchSubscription = async () => {
-    if (!user || isFetching) {
+    if (!user) {
+      setSubscription(null);
+      setIsLoading(false);
       return;
     }
 
-    setIsFetching(true);
     try {
-      console.log('Fetching subscription for user:', user.id);
+      setIsLoading(true);
+      
+      // First check if a subscription exists
+      const { data: existingSubscription, error: checkError } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error("Error checking subscription:", checkError);
+        setSubscription(null);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!existingSubscription) {
+        // Create a new subscription with free plan
+        const { data: newSubscription, error: createError } = await supabase
+          .from("subscriptions")
+          .insert({
+            user_id: user.id,
+            plan_type: "free",
+            status: "inactive",
+            current_period_end: null,
+            can_downgrade: false,
+            cancel_at_period_end: false
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error("Error creating subscription:", createError);
+          setSubscription(null);
+          setIsLoading(false);
+          return;
+        }
+
+        setSubscription(newSubscription as Subscription);
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch the full subscription data
       const { data, error } = await supabase
         .from("subscriptions")
-        .select("*")
+        .select(`
+          id,
+          user_id,
+          plan_type,
+          stripe_customer_id,
+          status,
+          current_period_end,
+          created_at,
+          updated_at,
+          trial_started_at,
+          trial_ended_at,
+          can_downgrade,
+          downgrade_available_at,
+          cancel_at_period_end
+        `)
         .eq("user_id", user.id)
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          console.log('No subscription found for user:', user.id);
-          setSubscription(null);
-        } else {
-          console.error("Error fetching subscription:", {
-            error,
-            code: error.code,
-            message: error.message,
-            details: error.details
-          });
-          setSubscription(null);
-        }
-      } else if (data) {
-        console.log('Subscription data retrieved:', {
-          status: data.status,
-          planType: data.plan_type,
-          currentPeriodEnd: data.current_period_end,
-          cancel_at_period_end: data.cancel_at_period_end
-        });
-
-        // Validate subscription data
-        if (!data.status || !data.plan_type || !data.current_period_end) {
-          console.error('Invalid subscription data:', data);
-          setSubscription(null);
-          return;
-        }
-
-        setSubscription({
-          status: data.status,
-          planType: data.plan_type as PlanType,
-          currentPeriodEnd: data.current_period_end,
-          subscriptionId: data.stripe_subscription_id,
-          cancel_at_period_end: data.cancel_at_period_end || false,
-          plan_type: data.plan_type as PlanType,
-          current_period_end: data.current_period_end,
-          created_at: data.created_at
-        });
-      } else {
-        console.log('No subscription data returned');
+        console.error("Error fetching subscription:", error);
         setSubscription(null);
+      } else {
+        setSubscription(data as Subscription);
       }
     } catch (error) {
-      console.error("Error in subscription fetch:", error);
+      console.error("Error in fetchSubscription:", error);
       setSubscription(null);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const forceRefreshSubscription = async () => {
+    setIsFetching(true);
+    try {
+      await fetchSubscription();
+    } finally {
       setIsFetching(false);
     }
   };
 
-  // Add a function to force refresh subscription
-  const forceRefreshSubscription = async () => {
-    setIsLoading(true);
-    await fetchSubscription();
-  };
-
-  // Modify the refreshSubscription function to be more robust
   const refreshSubscription = async () => {
     if (!isFetching) {
       await forceRefreshSubscription();
     }
   };
 
-  // Add subscription status check with validation
-  useEffect(() => {
-    if (subscription) {
-      // Validate subscription data
-      if (!subscription.status || !subscription.planType || !subscription.currentPeriodEnd) {
-        console.error('Invalid subscription data in context:', subscription);
-        setSubscription(null);
-        return;
-      }
-
-      console.log('Subscription status changed:', {
-        status: subscription.status,
-        planType: subscription.planType,
-        currentPeriodEnd: subscription.currentPeriodEnd,
-        isInTrialPeriod,
-        hasPremiumAccess
-      });
-    }
-  }, [subscription]);
-
-  // Initial fetch
-  useEffect(() => {
-    if (user) {
-      fetchSubscription();
-    }
-  }, [user]);
+  const value = {
+    subscription,
+    isLoading,
+    refreshSubscription,
+    fetchSubscription,
+    forceRefreshSubscription,
+    isInTrialPeriod,
+    hasPremiumAccess,
+  };
 
   return (
-    <SubscriptionContext.Provider
-      value={{
-        subscription,
-        isLoading,
-        refreshSubscription,
-        fetchSubscription,
-        forceRefreshSubscription,
-        isInTrialPeriod,
-        hasPremiumAccess,
-      }}
-    >
+    <SubscriptionContext.Provider value={value}>
       {children}
     </SubscriptionContext.Provider>
   );

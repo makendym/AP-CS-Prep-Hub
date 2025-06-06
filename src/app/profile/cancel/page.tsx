@@ -43,13 +43,13 @@ export default function CancelSubscriptionPage() {
   const getCancellationMessage = () => {
     if (!subscription) return null;
 
-    const isYearlyPlan = subscription.planType === "student_yearly";
-    const renewalDate = new Date(subscription.currentPeriodEnd);
-    const formattedDate = renewalDate.toLocaleDateString('en-US', {
+    const isYearlyPlan = subscription.plan_type === "student_yearly";
+    const renewalDate = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
+    const formattedDate = renewalDate?.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
-    });
+    }) ?? 'N/A';
 
     // If already cancelled, show different message
     if (subscription.cancel_at_period_end) {
@@ -80,29 +80,17 @@ export default function CancelSubscriptionPage() {
     setSuccess("");
 
     try {
-      const response = await fetch("/api/stripe/cancel-subscription", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          subscriptionId: subscription.subscriptionId,
-        }),
-      });
+      const { error } = await supabase
+        .from('subscriptions')
+        .update({ 
+          cancel_at_period_end: true,
+          status: 'canceled'
+        })
+        .eq('id', subscription.id);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to cancel subscription");
-      }
-
-      // Show the specific message from the API
-      setSuccess(data.message || "Your subscription has been updated.");
-      
-      // Refresh the subscription data
+      if (error) throw error;
       await refreshSubscription();
-
-      // Set success state
+      setSuccess(subscription.plan_type === "student_yearly" ? "Your subscription has been successfully cancelled. You will maintain access until the end of your current billing period." : "Your subscription has been successfully cancelled. Your access will end immediately.");
       setCancellationStep('success');
       
       // Wait 3 seconds in success state before starting redirect
@@ -114,7 +102,7 @@ export default function CancelSubscriptionPage() {
         }, 3000);
       }, 3000);
     } catch (error) {
-      logger.error("Error canceling subscription:", error);
+      logger.error("Error cancelling subscription:", error);
       setError(error instanceof Error ? error.message : "Failed to cancel subscription");
       setCancellationStep('idle');
     }
@@ -140,8 +128,8 @@ export default function CancelSubscriptionPage() {
     return null; // Will redirect in useEffect
   }
 
-  const renewalDate = new Date(subscription.currentPeriodEnd);
-  const isExpired = isNaN(renewalDate.getTime());
+  const renewalDate = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
+  const isExpired = !renewalDate || isNaN(renewalDate.getTime());
   const subscriptionStatus = subscription.status as SubscriptionStatus;
 
   return (
@@ -192,13 +180,15 @@ export default function CancelSubscriptionPage() {
                     <div className="flex flex-col gap-2">
                       <p className="font-medium">Your subscription has been successfully cancelled.</p>
                       <p className="text-sm text-green-700">
-                        {subscription.planType === "student_yearly" 
-                          ? `You will maintain access until ${new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })}.`
-                          : "Your access will end immediately."}
+                        {subscription.plan_type === "student_yearly" 
+                          ? `You will maintain access until ${subscription.current_period_end 
+                              ? new Date(subscription.current_period_end).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })
+                              : 'N/A'}`
+                          : 'You will maintain access until the end of your current billing period.'}
                       </p>
                     </div>
                   </AlertDescription>
