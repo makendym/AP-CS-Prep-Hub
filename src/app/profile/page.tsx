@@ -48,27 +48,28 @@ const SubscriptionBadge: React.FC<SubscriptionBadgeProps> = ({ subscription, isA
   // Add debug logging
   console.log('SubscriptionBadge props:', {
     subscription: {
-      planType: subscription.planType,
+      plan_type: subscription.plan_type,
       status: subscription.status,
-      currentPeriodEnd: subscription.currentPeriodEnd,
+      current_period_end: subscription.current_period_end,
       created_at: subscription.created_at,
       cancel_at_period_end: subscription.cancel_at_period_end
     },
     isActive
   });
 
-  const planName = subscription.planType === "student_yearly" ? "Student Yearly" :
-                  subscription.planType === "student" ? "Student Monthly" :
-                  subscription.planType === "trial" ? "Trial" :
-                  subscription.planType === "classroom" ? "Classroom" : "Free";
+  const planName = subscription.plan_type === "student_yearly" ? "Student Yearly" :
+                  subscription.plan_type === "student" ? "Student Monthly" :
+                  subscription.plan_type === "trial" ? "Trial" :
+                  subscription.plan_type === "classroom" ? "Classroom" : "Free";
 
   // If it's a trial subscription
-  if (subscription.planType === "trial" && isActive) {
-    const daysLeft = Math.ceil((new Date(subscription.currentPeriodEnd).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+  if (subscription.plan_type === "trial" && isActive && subscription.current_period_end) {
+    const currentPeriodEnd = new Date(subscription.current_period_end);
+    const daysLeft = Math.ceil((currentPeriodEnd.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     
     // Validate days left
     if (isNaN(daysLeft) || daysLeft < 0) {
-      console.error('Invalid trial period end date:', subscription.currentPeriodEnd);
+      console.error('Invalid trial period end date:', subscription.current_period_end);
       return (
         <div className="flex items-center gap-2">
           <Badge variant="destructive" className="ml-2">
@@ -91,27 +92,39 @@ const SubscriptionBadge: React.FC<SubscriptionBadgeProps> = ({ subscription, isA
   }
   
   // For paid subscriptions
-  let endDate: Date;
+  let endDate: Date | null = null;
   
   // For yearly plans that are active and not cancelled, calculate renewal date from current_period_end
-  if (subscription.planType === "student_yearly" && isActive && !subscription.cancel_at_period_end) {
-    endDate = new Date(subscription.currentPeriodEnd);
+  if (subscription.plan_type === "student_yearly" && isActive && !subscription.cancel_at_period_end && subscription.current_period_end) {
+    const currentPeriodEnd = new Date(subscription.current_period_end);
+    endDate = new Date(currentPeriodEnd);
     endDate.setFullYear(endDate.getFullYear() + 1);
     
     console.log('Yearly plan renewal calculation:', {
-      currentPeriodEnd: subscription.currentPeriodEnd,
+      current_period_end: subscription.current_period_end,
       renewalDate: endDate.toISOString(),
       now: new Date().toISOString()
     });
-  } else {
+  } else if (subscription.current_period_end) {
     // For all other cases, use current_period_end
-    endDate = new Date(subscription.currentPeriodEnd);
+    endDate = new Date(subscription.current_period_end);
+  }
+  
+  // For free plan, just show the badge without any date
+  if (subscription.plan_type === "free") {
+    return (
+      <div className="flex items-center gap-2">
+        <Badge variant={isActive ? "default" : "secondary"} className="ml-2">
+          {planName} Plan
+        </Badge>
+      </div>
+    );
   }
   
   // Validate end date
-  if (isNaN(endDate.getTime())) {
+  if (!endDate || isNaN(endDate.getTime())) {
     console.error('Invalid end date:', {
-      currentPeriodEnd: subscription.currentPeriodEnd
+      current_period_end: subscription.current_period_end
     });
     return (
       <div className="flex items-center gap-2">
@@ -133,7 +146,7 @@ const SubscriptionBadge: React.FC<SubscriptionBadgeProps> = ({ subscription, isA
   });
 
   // For yearly plans that are scheduled for cancellation
-  if (subscription.planType === "student_yearly" && subscription.cancel_at_period_end) {
+  if (subscription.plan_type === "student_yearly" && subscription.cancel_at_period_end) {
     return (
       <div className="flex items-center gap-2">
         <Badge variant="secondary" className="ml-2">
@@ -323,21 +336,31 @@ export default function ProfilePage() {
   const [isNavigatingToPricing, setIsNavigatingToPricing] = useState(false);
   const [isNavigatingToHome, setIsNavigatingToHome] = useState(false);
 
+  // Add debug logging for loading states
   useEffect(() => {
-    // Only redirect to login if we're sure there's no user
-    // This prevents the flash of login page
-    if (user === null && !isPageLoading) {
+    console.log('Loading states:', {
+      isPageLoading,
+      subscriptionLoading,
+      hasUser: !!user,
+      hasProfile: !!profile,
+      hasProgress: !!progress,
+      hasSubscription: !!subscription
+    });
+  }, [isPageLoading, subscriptionLoading, user, profile, progress, subscription]);
+
+  useEffect(() => {
+    if (user === null) {
       router.push("/login");
       return;
     }
 
     const fetchProfile = async () => {
-      if (!user) return; // Don't fetch if we don't have a user yet
+      if (!user) return;
 
       try {
         console.log('Fetching profile for user:', user.id);
         
-        // Fetch profile with error handling
+        // First try to fetch the profile
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("*")
@@ -346,40 +369,13 @@ export default function ProfilePage() {
 
         if (profileError) {
           console.error('Profile fetch error:', profileError);
-          
-          // If profile doesn't exist, create one
-          if (profileError.code === 'PGRST116') {
-            console.log('Creating new profile for user:', user.id);
-            const { data: newProfile, error: createError } = await supabase
-              .from("profiles")
-              .insert({
-                id: user.id,
-                name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0],
-                email: user.email,
-                avatar_url: user.user_metadata?.avatar_url,
-                subscription_status: 'inactive',
-                subscription_plan: null,
-              })
-              .select()
-              .single();
-
-            if (createError) {
-              console.error('Error creating profile:', createError);
-              throw new Error(`Failed to create profile: ${createError.message}`);
-            }
-            
-            console.log('New profile created:', newProfile);
-            setProfile(newProfile);
-          } else {
-            throw new Error(`Failed to fetch profile: ${profileError.message}`);
-          }
-        } else {
-          console.log('Profile data retrieved:', profileData);
-          setProfile(profileData);
+          throw new Error(`Failed to fetch profile: ${profileError.message}`);
         }
 
-        // Fetch progress with error handling
-        console.log('Fetching progress for user:', user.id);
+        console.log('Profile data retrieved:', profileData);
+        setProfile(profileData);
+
+        // Fetch progress
         const { data: progressData, error: progressError } = await supabase
           .from("user_progress")
           .select("*")
@@ -388,39 +384,11 @@ export default function ProfilePage() {
 
         if (progressError) {
           console.error('Progress fetch error:', progressError);
-          
-          // If progress doesn't exist, create one
-          if (progressError.code === 'PGRST116') {
-            console.log('Creating new progress for user:', user.id);
-            const { data: newProgress, error: createError } = await supabase
-              .from("user_progress")
-              .insert({
-                user_id: user.id,
-                completed_questions: 0,
-                total_questions: 50,
-                mcqs_correct: '0%',
-                frqs_attempted: '0',
-                study_time: '0 hrs',
-                strong_topics: [],
-                weak_topics: [],
-              })
-              .select()
-              .single();
-
-            if (createError) {
-              console.error('Error creating progress:', createError);
-              throw new Error(`Failed to create progress: ${createError.message}`);
-            }
-            
-            console.log('New progress created:', newProgress);
-            setProgress(newProgress);
-          } else {
-            throw new Error(`Failed to fetch progress: ${progressError.message}`);
-          }
-        } else {
-          console.log('Progress data retrieved:', progressData);
-          setProgress(progressData);
+          throw new Error(`Failed to fetch progress: ${progressError.message}`);
         }
+
+        console.log('Progress data retrieved:', progressData);
+        setProgress(progressData);
       } catch (error) {
         console.error("Error in profile fetch:", error);
         setError(error instanceof Error ? error.message : "Failed to load profile data. Please try refreshing the page.");
@@ -430,7 +398,7 @@ export default function ProfilePage() {
     };
 
     fetchProfile();
-  }, [user, router, isPageLoading]);
+  }, [user, router]);
 
   // Update navigation handlers to include a small delay
   const handleNavigation = (path: string, setLoadingState: (value: boolean) => void) => {
@@ -483,19 +451,21 @@ export default function ProfilePage() {
     if (subscription) {
       console.log('Subscription data updated:', {
         status: subscription.status,
-        planType: subscription.planType,
-        currentPeriodEnd: subscription.currentPeriodEnd
+        plan_type: subscription.plan_type,
+        current_period_end: subscription.current_period_end
       });
     }
   }, [subscription]);
 
   // Show loading state with skeleton
   if (isPageLoading || subscriptionLoading) {
+    console.log('Showing skeleton:', { isPageLoading, subscriptionLoading });
     return <ProfileSkeleton />;
   }
 
   // Show error state if there's an error and no profile data
   if (error && !profile) {
+    console.log('Showing error:', { error, hasProfile: !!profile });
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Alert variant="destructive" className="max-w-md">
@@ -508,6 +478,7 @@ export default function ProfilePage() {
 
   // Show error state if profile is missing
   if (!profile) {
+    console.log('Profile missing');
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Alert variant="destructive" className="max-w-md">

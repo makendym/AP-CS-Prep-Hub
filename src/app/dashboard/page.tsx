@@ -140,7 +140,7 @@ function DashboardContent() {
           {subscription?.status === "active" ? (
             <div className="flex items-center gap-2 text-green-600">
               <CheckCircle className="h-5 w-5" />
-              <p>Active Subscription - {subscription.planType} Plan</p>
+              <p>Active Subscription - {subscription.plan_type} Plan</p>
             </div>
           ) : (
             <div className="flex items-center gap-2 text-yellow-600">

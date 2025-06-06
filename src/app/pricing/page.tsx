@@ -210,7 +210,7 @@ export default function PricingPage() {
   }, []);
 
   const handleLogin = async (email: string, password: string) => {
-    await login(email, password);
+    return login(email, password);
   };
 
   const handleRegister = async (
@@ -218,7 +218,7 @@ export default function PricingPage() {
     password: string,
     name: string,
   ) => {
-    await register(email, password, name);
+    return register(email, password, name);
   };
 
   const handleNavigation = (path: string, setLoadingState: (value: boolean) => void) => {
@@ -390,27 +390,30 @@ export default function PricingPage() {
     
     // For free trial plan
     if (planName.toLowerCase() === "free trial") {
-      if (subscription?.planType === "trial" && subscription?.status === "active") {
+      if (subscription?.plan_type === "trial" && subscription?.status === "active") {
         return "Current Plan";
       }
-      return "Start Free Trial";
+      return hasUsedTrial ? "Trial Used" : "Start Free Trial";
     }
     
-    // For Student plans
+    // For Student plans (both monthly and yearly)
     if (planName.toLowerCase() === "student") {
       // If checking yearly plan
       if (isYearly) {
-        return subscription?.planType === "student_yearly" && subscription?.status === "active"
+        return subscription?.plan_type === "student_yearly" && subscription?.status === "active"
           ? "Current Plan"
           : "Subscribe Yearly";
       }
       // If checking monthly plan
-      return subscription?.planType === "student" && subscription?.status === "active"
+      return subscription?.plan_type === "student" && subscription?.status === "active"
         ? "Current Plan"
         : "Subscribe Now";
     }
     
-    return "Subscribe Now";
+    // For other plans
+    return subscription?.plan_type === planName.toLowerCase() && subscription?.status === "active"
+      ? "Current Plan"
+      : "Contact Sales";
   };
 
   const getPlanButtonVariant = (planName: string) => {
@@ -419,14 +422,14 @@ export default function PricingPage() {
     
     // For trial plan
     if (planType === "free trial") {
-      return subscription?.planType === "trial" && subscription?.status === "active"
+      return subscription?.plan_type === "trial" && subscription?.status === "active"
         ? "secondary"
         : "default";
     }
     
     // For student plans
     if (planType === "student") {
-      return subscription?.planType === "student" && subscription?.status === "active"
+      return subscription?.plan_type === "student" && subscription?.status === "active"
         ? "secondary"
         : "default";
     }
@@ -439,21 +442,21 @@ export default function PricingPage() {
     
     // For free trial plan
     if (planName.toLowerCase() === "free trial") {
-      return subscription.planType === "trial" && subscription.status === "active";
+      return subscription.plan_type === "trial" && subscription.status === "active";
     }
     
     // For Student plans (both monthly and yearly)
     if (planName.toLowerCase() === "student") {
       // If checking yearly plan
       if (isYearly) {
-        return subscription.planType === "student_yearly" && subscription.status === "active";
+        return subscription.plan_type === "student_yearly" && subscription.status === "active";
       }
       // If checking monthly plan
-      return subscription.planType === "student" && subscription.status === "active";
+      return subscription.plan_type === "student" && subscription.status === "active";
     }
     
     // For other plans
-    return subscription.planType === planName.toLowerCase() && subscription.status === "active";
+    return subscription.plan_type === planName.toLowerCase() && subscription.status === "active";
   };
 
   const plans: Plan[] = [
@@ -597,10 +600,10 @@ export default function PricingPage() {
             </p>
             
             {/* Only show trial period message if currently in trial */}
-            {isInTrialPeriod && (
+            {isInTrialPeriod && subscription?.current_period_end && (
               <div className="mt-6 p-4 bg-primary/10 rounded-lg inline-block">
                 <p className="text-primary font-medium">
-                  Your trial period ends in {Math.ceil((new Date(subscription?.currentPeriodEnd || '').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days
+                  Your trial period ends in {Math.ceil((new Date(subscription.current_period_end).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days
                 </p>
               </div>
             )}

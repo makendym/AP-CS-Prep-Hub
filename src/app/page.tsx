@@ -25,6 +25,7 @@ import TopicSelection from "@/components/practice/TopicSelection";
 import { useAuth } from "@/components/auth/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
 import { User } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 interface UserProgress {
   completedQuestions?: number;
@@ -57,18 +58,55 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (supabaseUser) {
-      // In a real app, you would fetch progress from your DB here
-      // For now, let's simulate fetching or use mock data
-      const mockProgress: UserProgress = {
-        completedQuestions: Math.floor(Math.random() * 20),
-        totalQuestions: 50,
-        mcqsCorrect: `${Math.floor(Math.random() * 100)}%`,
-        frqsAttempted: String(Math.floor(Math.random() * 10)),
-        studyTime: `${Math.floor(Math.random() * 10)} hrs`,
-        strongTopics: getRandomTopics(),
-        weakTopics: getRandomTopics(),
+      const fetchUserData = async () => {
+        try {
+          // Fetch profile data - it should always exist due to the trigger
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", supabaseUser.id)
+            .maybeSingle();
+
+          if (profileError) {
+            console.error("Error fetching profile:", profileError);
+            return;
+          }
+
+          // Fetch progress data - it should always exist due to the trigger
+          const { data: progressData, error: progressError } = await supabase
+            .from("user_progress")
+            .select("*")
+            .eq("user_id", supabaseUser.id)
+            .maybeSingle();
+
+          if (progressError) {
+            console.error("Error fetching progress:", progressError);
+            return;
+          }
+
+          // If either profile or progress doesn't exist yet, wait a moment and try again
+          if (!profileData || !progressData) {
+            console.log('Profile or progress not found, waiting for trigger...');
+            setTimeout(fetchUserData, 1000); // Try again in 1 second
+            return;
+          }
+
+          // Set user progress with actual data
+          setUserProgress({
+            completedQuestions: progressData.completed_questions,
+            totalQuestions: progressData.total_questions,
+            mcqsCorrect: progressData.mcqs_correct,
+            frqsAttempted: progressData.frqs_attempted,
+            studyTime: progressData.study_time,
+            strongTopics: progressData.strong_topics,
+            weakTopics: progressData.weak_topics
+          });
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
       };
-      setUserProgress(mockProgress);
+
+      fetchUserData();
     } else {
       setUserProgress(null);
     }
@@ -147,7 +185,7 @@ export default function Dashboard() {
   };
 
   const handleLogin = async (email: string, password: string) => {
-    await login(email, password);
+    return login(email, password);
   };
 
   const handleRegister = async (
@@ -155,7 +193,7 @@ export default function Dashboard() {
     password: string,
     name: string,
   ) => {
-    await register(email, password, name);
+    return register(email, password, name);
   };
 
   const handleLogout = async () => {

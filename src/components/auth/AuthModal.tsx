@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,15 +12,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, X, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "./AuthContext";
+import LoadingPage from "./LoadingPage";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: (email: string, password: string) => void;
-  onRegister: (email: string, password: string, name: string) => void;
-  onGoogleLogin?: () => void;
+  onLogin: (email: string, password: string) => Promise<boolean>;
+  onRegister: (email: string, password: string, name: string) => Promise<boolean>;
+  onGoogleLogin: () => Promise<boolean>;
 }
 
 export default function AuthModal({
@@ -28,106 +30,130 @@ export default function AuthModal({
   onClose,
   onLogin,
   onRegister,
-  onGoogleLogin = () => {},
+  onGoogleLogin,
 }: AuthModalProps) {
   const [activeTab, setActiveTab] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { error: authError } = useAuth();
+
+  // Update local error state when auth error changes
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+    }
+  }, [authError]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setIsLoading(true);
+    setIsLoginLoading(true);
 
-    try {
-      await onLogin(email, password);
-      onClose();
-    } catch (err) {
-      setError("Invalid email or password");
-    } finally {
-      setIsLoading(false);
+    const success = await onLogin(email, password);
+    if (!success) {
+      // Keep modal open and show error
+      setIsLoginLoading(false);
+      return;
     }
+    
+    setIsLoginLoading(false);
+    onClose();
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setIsLoading(true);
+    setIsLoginLoading(true);
 
-    if (!name.trim()) {
-      setError("Please enter your name");
-      setIsLoading(false);
+    const success = await onRegister(email, password, name);
+    if (!success) {
+      // Keep modal open and show error
+      setIsLoginLoading(false);
       return;
     }
 
-    try {
-      await onRegister(email, password, name);
-      onClose();
-    } catch (err) {
-      setError("Registration failed. Please try again.");
-    } finally {
-      setIsLoading(false);
+    setIsLoginLoading(false);
+    onClose();
+  };
+
+  const handleGoogleLogin = async () => {
+    setError("");
+    setIsGoogleLoading(true);
+    const success = await onGoogleLogin();
+    if (!success) {
+      setIsGoogleLoading(false);
+      return;
     }
+    setIsGoogleLoading(false);
+    onClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>AP CS Exam Prep</DialogTitle>
-          <DialogDescription>
-            Sign in or create an account to track your progress and save your
-            practice results.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      {isGoogleLoading && <LoadingPage />}
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        // Only allow closing if not loading
+        if (!isLoginLoading && !isGoogleLoading) {
+          onClose();
+        }
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Welcome to AP CompTutor</DialogTitle>
+            <DialogDescription>
+              Sign in to your account or create a new one
+            </DialogDescription>
+          </DialogHeader>
 
-        <Tabs
-          defaultValue="login"
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
-          </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
+            </TabsList>
 
-          {error && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <TabsContent value="login" className="mt-4">
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
-              </Button>
+            <TabsContent value="login">
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoginLoading}>
+                  {isLoginLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    "Sign In"
+                  )}
+                </Button>
+              </form>
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
@@ -139,95 +165,92 @@ export default function AuthModal({
                 </div>
               </div>
               <Button
-                type="button"
                 variant="outline"
+                type="button"
                 className="w-full"
-                onClick={onGoogleLogin}
-                disabled={isLoading}
+                onClick={handleGoogleLogin}
+                disabled={isGoogleLoading}
               >
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                  <path d="M1 1h22v22H1z" fill="none" />
-                </svg>
-                Google
+                {isGoogleLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in with Google...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="mr-2 h-4 w-4"
+                      aria-hidden="true"
+                      focusable="false"
+                      data-prefix="fab"
+                      data-icon="google"
+                      role="img"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 488 512"
+                    >
+                      <path
+                        fill="currentColor"
+                        d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"
+                      ></path>
+                    </svg>
+                    Sign in with Google
+                  </>
+                )}
               </Button>
-              <div className="text-center text-sm mt-4">
-                <Button
-                  variant="link"
-                  onClick={() => setActiveTab("register")}
-                  className="p-0"
-                >
-                  Don't have an account? Register
-                </Button>
-              </div>
-            </form>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="register" className="mt-4">
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="register-name">Name</Label>
-                <Input
-                  id="register-name"
-                  type="text"
-                  placeholder="Your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="register-email">Email</Label>
-                <Input
-                  id="register-email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="register-password">Password</Label>
-                <Input
-                  id="register-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating account..." : "Register"}
-              </Button>
-              <div className="text-center text-sm">
-                <Button
-                  variant="link"
-                  onClick={() => setActiveTab("login")}
-                  className="p-0"
-                >
-                  Already have an account? Login
+            <TabsContent value="register">
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="register-email">Email</Label>
+                  <Input
+                    id="register-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="register-password">Password</Label>
+                  <Input
+                    id="register-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoginLoading}>
+                  {isLoginLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    "Create Account"
+                  )}
                 </Button>
-              </div>
-            </form>
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
