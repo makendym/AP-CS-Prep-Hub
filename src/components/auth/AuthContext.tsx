@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import SessionTimeoutModal from "./SessionTimeoutModal";
 
 // Timeout duration in milliseconds (e.g., 1 minute)
-const SESSION_TIMEOUT = 30 * 1000; // 30 seconds
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const WARNING_DURATION = 15; // 15 seconds warning
 const ACTIVITY_THROTTLE = 1000; // Throttle activity checks to once per second
 
