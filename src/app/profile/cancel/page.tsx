@@ -41,6 +41,8 @@ export default function CancelSubscriptionPage() {
   }, [user, subscription, router]);
 
   const getCancellationMessage = () => {
+    if (!subscription) return null;
+
     const isYearlyPlan = subscription.plan_type === "student_yearly";
     const renewalDate = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
     const formattedDate = renewalDate?.toLocaleDateString('en-US', {
