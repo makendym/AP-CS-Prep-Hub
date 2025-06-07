@@ -105,7 +105,7 @@ export default function CancelSubscriptionPage() {
         setCancellationStep('redirecting');
         // Wait another 3 seconds before actually redirecting
         setTimeout(() => {
-          router.push("/");
+          router.replace("/profile");
         }, 3000);
       }, 7000);
     } catch (error) {
@@ -116,17 +116,6 @@ export default function CancelSubscriptionPage() {
   };
 
   const isLoading = subscriptionLoading || (cancellationStep as CancellationStep) === 'processing';
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="text-muted-foreground">
-          {(cancellationStep as CancellationStep) === 'processing' ? "Processing your cancellation..." : "Loading subscription details..."}
-        </p>
-      </div>
-    );
-  }
 
   // Redirect if no subscription or if subscription is already in a terminal state
   if (!subscription || 
@@ -174,84 +163,95 @@ export default function CancelSubscriptionPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              
-              {cancellationStep === 'success' && (
-                <Alert className="bg-green-50 border-green-200">
-                  <AlertDescription className="text-green-800">
-                    <div className="flex flex-col gap-2">
-                      <p className="font-medium">Your subscription has been successfully cancelled.</p>
-                      <p className="text-sm text-green-700">
-                        {subscription.plan_type === "student_yearly" 
-                          ? `You will maintain access until ${subscription.current_period_end 
-                              ? new Date(subscription.current_period_end).toLocaleDateString('en-US', {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                })
-                              : 'N/A'}`
-                          : 'You will maintain access until the end of your current billing period.'}
-                      </p>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {cancellationStep === 'redirecting' && (
-                <Alert className="bg-blue-50 border-blue-200">
-                  <AlertDescription className="text-blue-800">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <p>Preparing to redirect you to the home page...</p>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <div className="space-y-4">
-                {!isExpired && subscriptionStatus !== "incomplete_expired" && cancellationStep === 'idle' && (
-                  <p className="text-sm text-muted-foreground">
-                    {getCancellationMessage()?.warning}
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-8 gap-4">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <p className="text-muted-foreground">
+                    {(cancellationStep as CancellationStep) === 'processing' ? "Processing your cancellation..." : "Loading subscription details..."}
                   </p>
-                )}
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Button
-                    variant="destructive"
-                    onClick={handleCancel}
-                    disabled={cancellationStep !== 'idle' || subscription.cancel_at_period_end}
-                    className="flex-1"
-                  >
-                    {cancellationStep === 'processing' ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : cancellationStep === 'success' ? (
-                      "Subscription Cancelled"
-                    ) : cancellationStep === 'redirecting' ? (
-                      "Redirecting..."
-                    ) : subscription.cancel_at_period_end ? (
-                      "Subscription Already Cancelled"
-                    ) : (
-                      "Cancel Subscription"
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => router.push("/")}
-                    disabled={cancellationStep !== 'idle'}
-                    className="flex-1"
-                  >
-                    {subscription.cancel_at_period_end || cancellationStep !== 'idle' ? "Back to Home" : "Keep Subscription"}
-                  </Button>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {cancellationStep === 'success' && (
+                    <Alert className="bg-green-50 border-green-200">
+                      <AlertDescription className="text-green-800">
+                        <div className="flex flex-col gap-2">
+                          <p className="font-medium">Your subscription has been successfully cancelled.</p>
+                          <p className="text-sm text-green-700">
+                            {subscription.plan_type === "student_yearly" 
+                              ? `You will maintain access until ${subscription.current_period_end 
+                                  ? new Date(subscription.current_period_end).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric'
+                                    })
+                                  : 'N/A'}`
+                              : 'You will maintain access until the end of your current billing period.'}
+                          </p>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {cancellationStep === 'redirecting' && (
+                    <Alert className="bg-blue-50 border-blue-200">
+                      <AlertDescription className="text-blue-800">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <p>Preparing to redirect you to the home page...</p>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="space-y-4">
+                    {!isExpired && subscriptionStatus !== "incomplete_expired" && cancellationStep === 'idle' && (
+                      <p className="text-sm text-muted-foreground">
+                        {getCancellationMessage()?.warning}
+                      </p>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <Button
+                        variant="destructive"
+                        onClick={handleCancel}
+                        disabled={cancellationStep !== 'idle' || subscription.cancel_at_period_end}
+                        className="flex-1"
+                      >
+                        {cancellationStep === 'processing' ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : cancellationStep === 'success' ? (
+                          "Subscription Cancelled"
+                        ) : cancellationStep === 'redirecting' ? (
+                          "Redirecting..."
+                        ) : subscription.cancel_at_period_end ? (
+                          "Subscription Already Cancelled"
+                        ) : (
+                          "Cancel Subscription"
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => router.push("/")}
+                        disabled={cancellationStep !== 'idle'}
+                        className="flex-1"
+                      >
+                        {subscription.cancel_at_period_end || cancellationStep !== 'idle' ? "Back to Home" : "Keep Subscription"}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
