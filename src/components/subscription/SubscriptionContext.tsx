@@ -12,6 +12,7 @@ export interface Subscription {
   user_id: string;
   plan_type: PlanType;
   stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   status: SubscriptionStatus;
   current_period_end: string | null;
   created_at: string;
@@ -166,6 +167,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           user_id,
           plan_type,
           stripe_customer_id,
+          stripe_subscription_id,
           status,
           current_period_end,
           created_at,

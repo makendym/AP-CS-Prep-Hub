@@ -80,17 +80,24 @@ export default function CancelSubscriptionPage() {
     setSuccess("");
 
     try {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({ 
-          cancel_at_period_end: true,
-          status: 'canceled'
-        })
-        .eq('id', subscription.id);
+      const response = await fetch('/api/stripe/cancel-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subscriptionId: subscription.stripe_subscription_id
+        }),
+      });
 
-      if (error) throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to cancel subscription');
+      }
+
       await refreshSubscription();
-      setSuccess(subscription.plan_type === "student_yearly" ? "Your subscription has been successfully cancelled. You will maintain access until the end of your current billing period." : "Your subscription has been successfully cancelled. Your access will end immediately.");
+      setSuccess(data.message || "Your subscription has been successfully cancelled.");
       setCancellationStep('success');
       
       // Wait 3 seconds in success state before starting redirect
