@@ -40,11 +40,6 @@ export default function CancelSubscriptionPage() {
     }
   }, [user, subscription, router]);
 
-  // If no subscription, don't render anything (will redirect in useEffect)
-  if (!subscription) {
-    return null;
-  }
-
   const getCancellationMessage = () => {
     const isYearlyPlan = subscription.plan_type === "student_yearly";
     const renewalDate = subscription.current_period_end ? new Date(subscription.current_period_end) : null;
@@ -102,21 +97,40 @@ export default function CancelSubscriptionPage() {
       await refreshSubscription();
       setSuccess(data.message || "Your subscription has been successfully cancelled.");
       setCancellationStep('success');
-      
-      // Wait 7 seconds in success state before showing redirecting state
-      setTimeout(() => {
-        setCancellationStep('redirecting');
-        // Wait another 3 seconds before actually redirecting
-        setTimeout(() => {
-          router.replace("/profile");
-        }, 3000);
-      }, 7000);
     } catch (error) {
       logger.error("Error cancelling subscription:", error);
       setError(error instanceof Error ? error.message : "Failed to cancel subscription");
       setCancellationStep('idle');
     }
   };
+
+  // Handle state transitions and redirection
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    if (cancellationStep === 'success') {
+      // After 7 seconds, show redirecting state
+      timeoutId = setTimeout(() => {
+        setCancellationStep('redirecting');
+      }, 7000);
+    } else if (cancellationStep === 'redirecting') {
+      // After 3 seconds in redirecting state, redirect to profile
+      timeoutId = setTimeout(() => {
+        router.replace("/profile");
+      }, 3000);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [cancellationStep, router]);
+
+  // If no subscription, don't render anything (will redirect in useEffect)
+  if (!subscription) {
+    return null;
+  }
 
   const isExpired = !subscription.current_period_end || isNaN(new Date(subscription.current_period_end).getTime());
   const subscriptionStatus = subscription.status as SubscriptionStatus;
