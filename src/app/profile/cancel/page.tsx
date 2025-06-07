@@ -100,14 +100,14 @@ export default function CancelSubscriptionPage() {
       setSuccess(data.message || "Your subscription has been successfully cancelled.");
       setCancellationStep('success');
       
-      // Wait 3 seconds in success state before starting redirect
+      // Wait 7 seconds in success state before showing redirecting state
       setTimeout(() => {
         setCancellationStep('redirecting');
         // Wait another 3 seconds before actually redirecting
         setTimeout(() => {
           router.push("/");
         }, 3000);
-      }, 3000);
+      }, 7000);
     } catch (error) {
       logger.error("Error cancelling subscription:", error);
       setError(error instanceof Error ? error.message : "Failed to cancel subscription");
