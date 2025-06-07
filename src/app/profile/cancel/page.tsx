@@ -115,7 +115,7 @@ export default function CancelSubscriptionPage() {
     }
   };
 
-  const isLoading = subscriptionLoading || (cancellationStep as CancellationStep) === 'processing';
+  const isLoading = subscriptionLoading;
 
   // Redirect if no subscription or if subscription is already in a terminal state
   if (!subscription || 
